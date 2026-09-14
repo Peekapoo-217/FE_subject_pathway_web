@@ -135,35 +135,91 @@ export class SubjectSearchComponent implements OnInit {
       });
   }
 
-  /** Khởi tạo IntersectionObserver quan sát các phân vùng .scroll-section (ScrollSpy). */
+  /** Cờ tạm khóa ScrollSpy khi người dùng chủ động click TOC để cuộn trang mượt mà. */
+  private isManualScrolling = false;
+  private manualScrollTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Khởi tạo ScrollSpy theo dõi phân vùng đang hiển thị để highlight mục lục chính xác và mượt mà. */
   private initScrollSpy(): void {
-    if (!this.isBrowser || typeof IntersectionObserver === 'undefined') {
+    if (!this.isBrowser) {
       return;
     }
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (
-            entry.isIntersecting &&
-            (entry.intersectionRatio >= 0.5 || entry.boundingClientRect.top <= window.innerHeight * 0.4)
-          ) {
-            this.activeSection.set(entry.target.id);
-          }
-        }
-      },
-      {
-        root: null,
-        threshold: [0.3, 0.5]
-      }
-    );
+    let ticking = false;
 
-    const sections = document.querySelectorAll('.scroll-section');
-    sections.forEach((section) => observer.observe(section));
+    const onScrollOrResize = () => {
+      if (this.isManualScrolling) {
+        return;
+      }
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          this.updateActiveSection();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    this.ngZone.runOutsideAngular(() => {
+      window.addEventListener('scroll', onScrollOrResize, { passive: true });
+      window.addEventListener('resize', onScrollOrResize, { passive: true });
+    });
+
+    // Cập nhật phân vùng active ban đầu
+    this.updateActiveSection();
 
     this.destroyRef.onDestroy(() => {
-      observer.disconnect();
+      window.removeEventListener('scroll', onScrollOrResize);
+      window.removeEventListener('resize', onScrollOrResize);
+      if (this.manualScrollTimer) {
+        clearTimeout(this.manualScrollTimer);
+      }
     });
+  }
+
+  /** Tính toán phân vùng hiện tại dựa theo vị trí cuộn và toạ độ các section trong DOM. */
+  private updateActiveSection(): void {
+    const scrollY = window.scrollY || window.pageYOffset;
+    const viewportHeight = window.innerHeight;
+    const docHeight = document.documentElement.scrollHeight;
+
+    // 1. Khi người dùng cuộn tới gần cuối trang -> highlight mục cuối cùng (faq)
+    if (scrollY + viewportHeight >= docHeight - 80) {
+      const lastId = this.tocMenus[this.tocMenus.length - 1].id;
+      if (this.activeSection() !== lastId) {
+        this.activeSection.set(lastId);
+      }
+      return;
+    }
+
+    // 2. Khi ở sát đỉnh trang -> highlight mục đầu tiên (hero)
+    if (scrollY <= 80) {
+      const firstId = this.tocMenus[0].id;
+      if (this.activeSection() !== firstId) {
+        this.activeSection.set(firstId);
+      }
+      return;
+    }
+
+    // 3. Quét các section theo thứ tự xuất hiện trong tocMenus
+    // Scanline là 140px từ mép trên viewport (ngay dưới tầm nhìn mắt người và header)
+    const scanOffset = 140;
+    let targetId = this.tocMenus[0].id;
+
+    for (const menu of this.tocMenus) {
+      const el = document.getElementById(menu.id);
+      if (!el) {
+        continue;
+      }
+      const rect = el.getBoundingClientRect();
+      if (rect.top <= scanOffset) {
+        targetId = menu.id;
+      }
+    }
+
+    if (this.activeSection() !== targetId) {
+      this.activeSection.set(targetId);
+    }
   }
 
   /** Cuộn mượt đến section tương ứng khi người dùng click vào TOC. */
@@ -172,10 +228,22 @@ export class SubjectSearchComponent implements OnInit {
       return;
     }
     const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      this.activeSection.set(id);
+    if (!element) {
+      return;
     }
+
+    // Khóa tạm scroll spy để không bị giật highlight qua các section trung gian khi đang lướt
+    this.isManualScrolling = true;
+    this.activeSection.set(id);
+
+    if (this.manualScrollTimer) {
+      clearTimeout(this.manualScrollTimer);
+    }
+    this.manualScrollTimer = setTimeout(() => {
+      this.isManualScrolling = false;
+    }, 800);
+
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   /** Bước 1: tải danh sách trường THPT khi mở trang. */
