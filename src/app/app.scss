@@ -1,0 +1,11 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.app-main {
+  min-height: 100dvh;
+  background:
+    radial-gradient(1200px 500px at 50% -10%, rgba(242, 112, 29, 0.08), transparent 60%),
+    linear-gradient(180deg, #f7fafc 0%, #eef4f9 100%);
+}
