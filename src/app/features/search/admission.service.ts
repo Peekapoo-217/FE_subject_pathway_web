@@ -55,6 +55,7 @@ export interface SubjectGroupRecommendationsResponse {
 /** Request body khi tra cứu tổ hợp xét tuyển theo danh sách môn (Bước 3). */
 export interface SubjectSearchRequest {
   subjectCodes: SubjectCode[];
+  universityCode?: string;
 }
 
 /** Tổ hợp xét tuyển trả về từ Backend (thông tin rút gọn). */
@@ -64,12 +65,26 @@ export interface CombinationDto {
   componentCount: number;
 }
 
+/** Ngành đào tạo xuất hiện qua ít nhất một tổ hợp phù hợp. */
+export interface MajorDto {
+  programCode: string;
+  programName: string;
+}
+
+/** Trường đại học có xét tuyển qua ít nhất một tổ hợp phù hợp. */
+export interface UniversityDto {
+  universityCode: string;
+  universityName: string;
+}
+
 /** Kết quả thống kê tra cứu trả về từ Backend. */
 export interface SubjectSearchResponse {
   totalCombinations: number;
   possibleCombinations: CombinationDto[];
   totalMajors: number;
   totalUniversities: number;
+  universities: UniversityDto[];
+  majors: MajorDto[];
 }
 
 /** Phân loại môn học thành nhóm bắt buộc và tự chọn. */

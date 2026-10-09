@@ -102,6 +102,10 @@ export class SubjectSearchComponent implements OnInit {
   protected readonly searchResult = signal<SubjectSearchResponse | null>(null);
   protected readonly isSearchLoading = signal(false);
   protected readonly searchError = signal<string | null>(null);
+  protected readonly selectedAnalysisTab = signal<'combinations' | 'majors'>('combinations');
+  protected readonly selectedUniversityCode = signal('');
+  protected readonly isMajorsLoading = signal(false);
+  protected readonly majorsError = signal<string | null>(null);
   private searchRequestId = 0;
 
   /** Chống memory leak: mọi subscribe của search đều route qua Subject này. */
@@ -315,6 +319,9 @@ export class SubjectSearchComponent implements OnInit {
     this.selectedGroup.set(null);
     this.searchResult.set(null);
     this.searchError.set(null);
+    this.selectedUniversityCode.set('');
+    this.isMajorsLoading.set(false);
+    this.majorsError.set(null);
     this.searchRequestId++;
     this.isSearchLoading.set(false);
     this.recommendations.set(null);
@@ -338,6 +345,9 @@ export class SubjectSearchComponent implements OnInit {
     this.selectedGroup.set(null);
     this.searchResult.set(null);
     this.searchError.set(null);
+    this.selectedUniversityCode.set('');
+    this.isMajorsLoading.set(false);
+    this.majorsError.set(null);
     this.searchRequestId++;
     this.isSearchLoading.set(false);
     this.recommendations.set(null);
@@ -410,8 +420,28 @@ export class SubjectSearchComponent implements OnInit {
   /** Chọn nhóm để xem chi tiết; gợi ý Top 3 chỉ chạy khi học sinh bấm nút riêng. */
   protected onGroupSelect(group: SubjectGroupDto): void {
     this.selectedGroup.set(group);
+    this.selectedAnalysisTab.set('combinations');
+    this.selectedUniversityCode.set('');
+    this.isMajorsLoading.set(false);
+    this.majorsError.set(null);
     this.recommendations.set(null);
     void this.fetchSearchResult(group);
+  }
+
+  protected onUniversityChange(event: Event): void {
+    const universityCode = (event.target as HTMLSelectElement).value;
+    this.selectedUniversityCode.set(universityCode);
+    this.majorsError.set(null);
+    this.searchResult.update((result) => result ? { ...result, majors: [] } : result);
+
+    if (!universityCode) {
+      this.searchRequestId++;
+      this.isMajorsLoading.set(false);
+      return;
+    }
+
+    const group = this.selectedGroup();
+    if (group) void this.fetchMajorsForUniversity(group, universityCode);
   }
 
   private async fetchSearchResult(group: SubjectGroupDto): Promise<void> {
@@ -423,13 +453,41 @@ export class SubjectSearchComponent implements OnInit {
       const response = await firstValueFrom(this.admissionService.searchBySubjects({
         subjectCodes: group.subjects.map((subject) => subject.code)
       }));
-      if (requestId === this.searchRequestId) this.searchResult.set(response.data);
+      if (requestId === this.searchRequestId) {
+        this.searchResult.set({
+          ...response.data,
+          universities: response.data.universities ?? [],
+          majors: []
+        });
+      }
     } catch (error: unknown) {
       if (requestId === this.searchRequestId) {
         this.searchError.set(this.admissionService.extractErrorMessage(error));
       }
     } finally {
       if (requestId === this.searchRequestId) this.isSearchLoading.set(false);
+    }
+  }
+
+  private async fetchMajorsForUniversity(group: SubjectGroupDto, universityCode: string): Promise<void> {
+    const requestId = ++this.searchRequestId;
+    this.isMajorsLoading.set(true);
+    try {
+      const response = await firstValueFrom(this.admissionService.searchBySubjects({
+        subjectCodes: group.subjects.map((subject) => subject.code),
+        universityCode
+      }));
+      if (requestId === this.searchRequestId) {
+        this.searchResult.update((result) => result
+          ? { ...result, majors: response.data.majors ?? [] }
+          : result);
+      }
+    } catch (error: unknown) {
+      if (requestId === this.searchRequestId) {
+        this.majorsError.set(this.admissionService.extractErrorMessage(error));
+      }
+    } finally {
+      if (requestId === this.searchRequestId) this.isMajorsLoading.set(false);
     }
   }
 

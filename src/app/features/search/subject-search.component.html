@@ -306,7 +306,8 @@
               <div class="engine-step__info">
                 <h3 id="step-group-title" class="engine-step__title">Chọn Nhóm Môn Định Hướng</h3>
                 <p class="engine-step__desc">
-                  Chọn năm học để xem đúng các nhóm 4 môn trường đang tổ chức. Đây là nhóm môn học THPT, không phải tổ hợp xét tuyển đại học.
+                  Chọn năm học để xem đúng các nhóm 4 môn trường đang tổ chức. Đây là nhóm môn học THPT, không phải tổ
+                  hợp xét tuyển đại học.
                 </p>
               </div>
             </div>
@@ -348,45 +349,41 @@
               <p class="empty-state__text">Trường này hiện chưa có dữ liệu nhóm môn học trong CSDL.</p>
             </div>
             } @else {
-            <label class="group-filter">
-              <span>Lọc nhóm theo tên hoặc môn học</span>
-              <input type="search" placeholder="Ví dụ: Tin học, KHTN…" (input)="onGroupFilter($event)">
-            </label>
             <div class="group-grid" role="listbox" aria-label="Danh sách nhóm môn học">
               @for (group of filteredSubjectGroups(); track group.groupCode) {
               <div class="group-choice">
-              <button type="button" role="option" class="group-card"
-                [class.group-card--active]="selectedGroup()?.groupCode === group.groupCode"
-                [attr.aria-selected]="selectedGroup()?.groupCode === group.groupCode"
-                (click)="onGroupSelect(group)">
-                <div class="group-card__top">
-                  <div class="group-card__headings">
-                    <span class="group-card__name">{{ group.groupName }}</span>
+                <button type="button" role="option" class="group-card"
+                  [class.group-card--active]="selectedGroup()?.groupCode === group.groupCode"
+                  [attr.aria-selected]="selectedGroup()?.groupCode === group.groupCode" (click)="onGroupSelect(group)">
+                  <div class="group-card__top">
+                    <div class="group-card__headings">
+                      <span class="group-card__name">{{ group.groupName }}</span>
+                    </div>
+                    <div class="group-card__status-indicator" aria-hidden="true">
+                      @if (selectedGroup()?.groupCode === group.groupCode) {
+                      <span class="checkmark-icon">✓</span>
+                      }
+                    </div>
                   </div>
-                  <div class="group-card__status-indicator" aria-hidden="true">
-                    @if (selectedGroup()?.groupCode === group.groupCode) {
-                    <span class="checkmark-icon">✓</span>
-                    }
-                  </div>
-                </div>
 
-                <div class="group-card__chips-box">
-                  <span class="group-card__chips-label">Các môn trong nhóm:</span>
-                  <div class="group-card__chips">
-                    @for (subject of group.subjects; track subject.code) {
-                    <span class="group-card__chip">
-                      <span class="chip-dot" aria-hidden="true"></span>
-                      {{ subject.name }}
-                    </span>
-                    }
+                  <div class="group-card__chips-box">
+                    <span class="group-card__chips-label">Các môn trong nhóm:</span>
+                    <div class="group-card__chips">
+                      @for (subject of group.subjects; track subject.code) {
+                      <span class="group-card__chip">
+                        <span class="chip-dot" aria-hidden="true"></span>
+                        {{ subject.name }}
+                      </span>
+                      }
+                    </div>
                   </div>
-                </div>
-              </button>
-              @if (showGroupComparison) {
-              <label class="compare-toggle"><input type="checkbox" [checked]="comparedGroupCodes().includes(group.groupCode)"
-                [disabled]="!comparedGroupCodes().includes(group.groupCode) && comparedGroupCodes().length >= 3"
-                (change)="toggleCompare(group, $event)"> So sánh</label>
-              }
+                </button>
+                @if (showGroupComparison) {
+                <label class="compare-toggle"><input type="checkbox"
+                    [checked]="comparedGroupCodes().includes(group.groupCode)"
+                    [disabled]="!comparedGroupCodes().includes(group.groupCode) && comparedGroupCodes().length >= 3"
+                    (change)="toggleCompare(group, $event)"> So sánh</label>
+                }
               </div>
               }
             </div>
@@ -395,7 +392,8 @@
               <h3>So sánh {{ comparedGroups().length }} nhóm</h3>
               @for (group of comparedGroups(); track group.groupCode) {
               <article><strong>{{ group.groupName }}</strong><span>{{ group.subjects.length }} môn</span>
-                <div class="group-card__chips">@for (subject of group.subjects; track subject.code) { <span class="group-card__chip">{{ subject.name }}</span> }</div>
+                <div class="group-card__chips">@for (subject of group.subjects; track subject.code) { <span
+                    class="group-card__chip">{{ subject.name }}</span> }</div>
               </article>
               }
             </div>
@@ -421,26 +419,75 @@
               <div class="engine-alert engine-alert--error" role="alert">{{ searchError() }}</div>
               } @else if (searchResult(); as result) {
               <div class="result-card">
-                <div class="kpi-grid">
-                  <div class="kpi-card kpi-card--primary"><div class="kpi-card__body"><span class="kpi-card__value">{{ result.totalCombinations }}</span><span class="kpi-card__label">Tổ hợp xét tuyển</span></div></div>
-                  <div class="kpi-card kpi-card--accent"><div class="kpi-card__body"><span class="kpi-card__value">{{ result.totalMajors }}</span><span class="kpi-card__label">Ngành đào tạo</span></div></div>
-                  <div class="kpi-card kpi-card--success"><div class="kpi-card__body"><span class="kpi-card__value">{{ result.totalUniversities }}</span><span class="kpi-card__label">Trường đại học</span></div></div>
+                <div class="analysis-tabs" role="tablist" aria-label="Nội dung kết quả tra cứu">
+                  <button type="button" role="tab" [attr.aria-selected]="selectedAnalysisTab() === 'combinations'"
+                    [class.analysis-tab--active]="selectedAnalysisTab() === 'combinations'"
+                    (click)="selectedAnalysisTab.set('combinations')">Tổ hợp xét tuyển</button>
+                  <button type="button" role="tab" [attr.aria-selected]="selectedAnalysisTab() === 'majors'"
+                    [class.analysis-tab--active]="selectedAnalysisTab() === 'majors'"
+                    (click)="selectedAnalysisTab.set('majors')">Ngành đào tạo</button>
                 </div>
+                @if (selectedAnalysisTab() === 'combinations') {
                 @if (result.possibleCombinations.length > 0) {
                 <div class="combos-wrapper">
-                  <div class="combos-wrapper__header"><h4 class="combos-wrapper__title">Các tổ hợp có thể đối chiếu</h4><span class="combos-wrapper__count">{{ result.possibleCombinations.length }}</span></div>
-                  <div class="combo-grid">@for (combination of result.possibleCombinations; track combination.combinationId) {
-                    <article class="combo-card"><div class="combo-card__info-col"><h5 class="combo-card__name">{{ combination.combinationDisplay }}</h5></div></article>
-                  }</div>
+                  <div class="combos-wrapper__header">
+                    <h4 class="combos-wrapper__title">Các tổ hợp có thể đối chiếu</h4><span
+                      class="combos-wrapper__count">{{ result.possibleCombinations.length }}</span>
+                  </div>
+                  <div class="combo-grid">@for (combination of result.possibleCombinations; track
+                    combination.combinationId) {
+                    <article class="combo-card">
+                      <div class="combo-card__info-col">
+                        <h5 class="combo-card__name">{{ combination.combinationDisplay }}</h5>
+                      </div>
+                    </article>
+                    }
+                  </div>
                 </div>
                 } @else {
                 <p class="empty-state__text">Chưa tìm thấy tổ hợp xét tuyển nào khớp đầy đủ với nhóm môn này.</p>
                 }
-                <small>Kết quả này chỉ để tham khảo các tổ hợp đại học hiện có; lựa chọn nhóm môn THPT vẫn dựa trên sở thích và định hướng học tập của em.</small>
+                } @else {
+                <div class="majors-wrapper" role="tabpanel" aria-label="Danh sách ngành đào tạo">
+                  <label class="university-filter">
+                    <span>Chọn trường đại học</span>
+                    <select [value]="selectedUniversityCode()" (change)="onUniversityChange($event)">
+                      <option value="">Chọn trường để xem ngành đào tạo</option>
+                      @for (university of result.universities; track university.universityCode) {
+                      <option [value]="university.universityCode">{{ university.universityName }}</option>
+                      }
+                    </select>
+                  </label>
+                  @if (result.universities.length === 0) {
+                  <p class="empty-state__text">Chưa có trường đại học xét tuyển qua các tổ hợp của nhóm môn này.</p>
+                  } @else if (!selectedUniversityCode()) {
+                  <p class="empty-state__text">Chọn một trường đại học để xem các ngành đào tạo phù hợp.</p>
+                  } @else if (isMajorsLoading()) {
+                  <p class="empty-state__text" role="status">Đang tải ngành đào tạo của trường đã chọn…</p>
+                  } @else if (majorsError()) {
+                  <p class="empty-state__text" role="alert">{{ majorsError() }}</p>
+                  } @else if (result.majors.length > 0) {
+                  <div class="majors-list">
+                    @for (major of result.majors; track major.programCode) {
+                    <article class="major-card">
+                      <span class="major-card__code">{{ major.programCode }}</span>
+                      <strong class="major-card__name">{{ major.programName }}</strong>
+                    </article>
+                    }
+                  </div>
+                  } @else {
+                  <p class="empty-state__text">Trường này chưa có ngành đào tạo khớp với các tổ hợp của nhóm môn này.
+                  </p>
+                  }
+                </div>
+                }
+                <small>Kết quả này chỉ để tham khảo các tổ hợp đại học hiện có; lựa chọn nhóm môn THPT vẫn dựa trên sở
+                  thích và định hướng học tập của em.</small>
               </div>
               } @else {
               <div class="result-placeholder">
-                <p class="result-placeholder__desc">Chọn bất kỳ nhóm môn nào ở trên để tự động tra cứu tổ hợp xét tuyển, ngành và trường đại học có thể đối chiếu.</p>
+                <p class="result-placeholder__desc">Chọn bất kỳ nhóm môn nào ở trên để tự động tra cứu tổ hợp xét tuyển,
+                  ngành và trường đại học có thể đối chiếu.</p>
               </div>
               }
             </section>
@@ -448,7 +495,8 @@
             @if (electiveSubjects().length > 0) {
             <div class="student-preferences">
               <h3>Điều em quan tâm</h3>
-              <p>Chọn môn yêu thích và tự đánh giá mức tự tin (1 = chưa tự tin, 5 = rất tự tin). Có thể bỏ qua một trong hai phần.</p>
+              <p>Chọn môn yêu thích và tự đánh giá mức tự tin (1 = chưa tự tin, 5 = rất tự tin). Có thể bỏ qua một trong
+                hai phần.</p>
               <div class="preference-subjects">
                 @for (subject of electiveSubjects(); track subject.code) {
                 <label class="preference-subject">
@@ -459,7 +507,8 @@
                     (change)="onConfidenceChange(subject.code, $event)">
                     <option value="">Chưa đánh giá</option>
                     @for (rating of [1, 2, 3, 4, 5]; track rating) {
-                    <option [value]="rating" [selected]="confidenceBySubjectCode()[subject.code] === rating">{{ rating }}/5</option>
+                    <option [value]="rating" [selected]="confidenceBySubjectCode()[subject.code] === rating">{{ rating
+                      }}/5</option>
                     }
                   </select>
                 </label>
@@ -469,7 +518,8 @@
                 [disabled]="isRecommendationLoading()">
                 {{ isRecommendationLoading() ? 'Đang xếp hạng…' : 'Gợi ý Top 3 nhóm môn phù hợp' }}
               </button>
-              @if (recommendationError()) { <p class="recommendation-error" role="alert">{{ recommendationError() }}</p> }
+              @if (recommendationError()) { <p class="recommendation-error" role="alert">{{ recommendationError() }}</p>
+              }
               @if (recommendations(); as result) {
               <div class="recommendation-results" aria-live="polite">
                 <h3>Gợi ý cho năm học {{ result.academicYear }}</h3>
@@ -478,23 +528,28 @@
                 }
                 @for (item of result.recommendations; track item.groupCode; let rank = $index) {
                 <article class="recommendation-card">
-                  <div class="recommendation-card__heading"><strong>#{{ rank + 1 }} · {{ item.groupName }}</strong><span>{{ item.score }}% phù hợp</span></div>
+                  <div class="recommendation-card__heading"><strong>#{{ rank + 1 }} · {{ item.groupName
+                      }}</strong><span>{{ item.score }}% phù hợp</span></div>
                   <p>{{ item.subjects.length }} môn:</p>
                   <div class="group-card__chips">
-                    @for (subject of item.subjects; track subject.code) { <span class="group-card__chip">{{ subject.name }}</span> }
+                    @for (subject of item.subjects; track subject.code) { <span class="group-card__chip">{{ subject.name
+                      }}</span> }
                   </div>
                   @if (item.matchedPreferredSubjects.length > 0) {
                   <p>Môn yêu thích trùng khớp:
-                    @for (subject of item.matchedPreferredSubjects; track subject.code; let last = $last) { {{ subject.name }}{{ last ? '' : ', ' }} }
+                    @for (subject of item.matchedPreferredSubjects; track subject.code; let last = $last) { {{
+                    subject.name }}{{ last ? '' : ', ' }} }
                   </p>
                   }
                   @if (item.lowConfidenceSubjects.length > 0) {
-                  <p>Nên tìm hiểu thêm: @for (subject of item.lowConfidenceSubjects; track subject.code; let last = $last) { {{ subject.name }}{{ last ? '' : ', ' }} }</p>
+                  <p>Nên tìm hiểu thêm: @for (subject of item.lowConfidenceSubjects; track subject.code; let last =
+                    $last) { {{ subject.name }}{{ last ? '' : ', ' }} }</p>
                   }
                   <ul>@for (explanation of item.explanations; track explanation) { <li>{{ explanation }}</li> }</ul>
                 </article>
                 }
-                <small>Điểm phù hợp chỉ hỗ trợ khám phá lựa chọn, không dự đoán kết quả tuyển sinh hay mức độ đủ điều kiện.</small>
+                <small>Điểm phù hợp chỉ hỗ trợ khám phá lựa chọn, không dự đoán kết quả tuyển sinh hay mức độ đủ điều
+                  kiện.</small>
               </div>
               }
             </div>
@@ -505,7 +560,8 @@
       </section>
 
       <!-- PHÂN VÙNG 3: KHỐI KẾT QUẢ (RESULT BOX) -->
-      <section id="legacy-results" class="result-section scroll-section" aria-labelledby="legacy-result-title" hidden aria-hidden="true">
+      <section id="legacy-results" class="result-section scroll-section" aria-labelledby="legacy-result-title" hidden
+        aria-hidden="true">
         @if (isSearchLoading()) {
         <div class="result-card result-card--loading" aria-busy="true">
           <div class="loading-box">
@@ -539,57 +595,6 @@
             <p class="result-header__note">
               (Đã bao gồm các môn thi bắt buộc theo quy định tốt nghiệp THPT như Toán, Ngữ văn)
             </p>
-          </div>
-
-          <!-- 3 KPI Cards -->
-          <div class="kpi-grid">
-            <div class="kpi-card kpi-card--primary">
-              <div class="kpi-card__icon-wrap">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <circle cx="12" cy="12" r="6"></circle>
-                  <circle cx="12" cy="12" r="2"></circle>
-                </svg>
-              </div>
-              <div class="kpi-card__body">
-                <span class="kpi-card__value">{{ result.totalCombinations }}</span>
-                <span class="kpi-card__label">Tổng Số Tổ Hợp</span>
-              </div>
-            </div>
-
-            <div class="kpi-card kpi-card--accent">
-              <div class="kpi-card__icon-wrap">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                </svg>
-              </div>
-              <div class="kpi-card__body">
-                <span class="kpi-card__value">{{ result.totalMajors }}</span>
-                <span class="kpi-card__label">Tổng Số Ngành Đào Tạo</span>
-              </div>
-            </div>
-
-            <div class="kpi-card kpi-card--success">
-              <div class="kpi-card__icon-wrap">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <line x1="3" y1="21" x2="21" y2="21"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                  <polygon points="12 2 3 7 21 7 12 2"></polygon>
-                  <line x1="6" y1="10" x2="6" y2="21"></line>
-                  <line x1="10" y1="10" x2="10" y2="21"></line>
-                  <line x1="14" y1="10" x2="14" y2="21"></line>
-                  <line x1="18" y1="10" x2="18" y2="21"></line>
-                </svg>
-              </div>
-              <div class="kpi-card__body">
-                <span class="kpi-card__value">{{ result.totalUniversities }}</span>
-                <span class="kpi-card__label">Trường Đại Học Xét Tuyển</span>
-              </div>
-            </div>
           </div>
 
           <!-- Danh sách tổ hợp chi tiết -->
