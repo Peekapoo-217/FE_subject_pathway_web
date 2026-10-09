@@ -12,13 +12,14 @@ import {
   signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, Subscription, tap } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 
 import {
   AdmissionService,
   HighSchoolDto,
   SubjectDto,
   SubjectGroupDto,
+  SubjectGroupRecommendationsResponse,
   SubjectSearchResponse
 } from './admission.service';
 
@@ -27,9 +28,12 @@ import {
  * Luồng 3 bước: Chọn Trường THPT → Chọn Nhóm môn → Tự động tra cứu.
  * Component chỉ quản lý UI state (Signals); mọi logic API nằm ở AdmissionService.
  */
+import { ChatPanelComponent } from '../chat/components/chat-panel/chat-panel.component';
+
 @Component({
   selector: 'app-subject-search',
   standalone: true,
+  imports: [ChatPanelComponent],
   templateUrl: './subject-search.component.html',
   styleUrl: './subject-search.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -51,6 +55,7 @@ export class SubjectSearchComponent implements OnInit {
     { id: 'subject-info', title: 'Phân Loại Môn Học' },
     { id: 'search-tool', title: 'Công Cụ Trắc Nghiệm' },
     { id: 'results', title: 'Các Khối Thi Lớn' },
+    { id: 'ai-advisor', title: 'Trợ Lý AI Tuyển Sinh' },
     { id: 'faq', title: 'Giải Đáp Thường Gặp' }
   ];
 
@@ -65,26 +70,45 @@ export class SubjectSearchComponent implements OnInit {
   protected readonly isSchoolsLoading = signal(true);
   protected readonly schoolsError = signal<string | null>(null);
   protected readonly selectedSchoolCode = signal<string>('');
+  protected readonly academicYears = signal<readonly string[]>([]);
+  protected readonly selectedAcademicYear = signal('');
 
   /** Bước 2 — nhóm môn của trường đang chọn. */
   protected readonly subjectGroups = signal<readonly SubjectGroupDto[]>([]);
+  protected readonly showGroupComparison = false;
+  protected readonly groupFilter = signal('');
+  protected readonly comparedGroupCodes = signal<readonly string[]>([]);
+  protected readonly filteredSubjectGroups = computed(() => {
+    const query = this.groupFilter().trim().toLocaleLowerCase();
+    if (!query) return this.subjectGroups();
+    return this.subjectGroups().filter((group) =>
+      `${group.groupCode} ${group.groupName} ${group.subjects.map((subject) => subject.name).join(' ')}`
+        .toLocaleLowerCase().includes(query));
+  });
+  protected readonly comparedGroups = computed(() => {
+    const selected = new Set(this.comparedGroupCodes());
+    return this.subjectGroups().filter((group) => selected.has(group.groupCode)).slice(0, 3);
+  });
   protected readonly isGroupsLoading = signal(false);
   protected readonly groupsError = signal<string | null>(null);
   protected readonly selectedGroup = signal<SubjectGroupDto | null>(null);
+  protected readonly preferredSubjectCodes = signal<readonly string[]>([]);
+  protected readonly confidenceBySubjectCode = signal<Record<string, number>>({});
+  protected readonly recommendations = signal<SubjectGroupRecommendationsResponse | null>(null);
+  protected readonly isRecommendationLoading = signal(false);
+  protected readonly recommendationError = signal<string | null>(null);
 
   /** Bước 3 — kết quả tra cứu. */
   protected readonly searchResult = signal<SubjectSearchResponse | null>(null);
   protected readonly isSearchLoading = signal(false);
   protected readonly searchError = signal<string | null>(null);
+  private searchRequestId = 0;
 
   /** Chống memory leak: mọi subscribe của search đều route qua Subject này. */
-  private readonly searchSubject = new Subject<SubjectGroupDto>();
-  /** Được init trong ngOnInit (SSR-safe), tự động hủy khi component destroyed. */
-  private searchSubscription!: Subscription;
 
   /** True khi có ít nhất 1 trong 3 API đang chạy — điều khiển spinner toàn cục. */
   protected readonly isBusy = computed(
-    () => this.isSchoolsLoading() || this.isGroupsLoading() || this.isSearchLoading()
+      () => this.isSchoolsLoading() || this.isGroupsLoading() || this.isSearchLoading() || this.isRecommendationLoading()
   );
 
   constructor() {
@@ -97,15 +121,6 @@ export class SubjectSearchComponent implements OnInit {
     if (!this.isBrowser) {
       return; // SSR/prerender: chỉ render shell tĩnh, API chạy ở browser.
     }
-
-    this.ngZone.runOutsideAngular(() => {
-      this.searchSubscription = this.searchSubject
-        .pipe(
-          tap((group) => this.fetchSearchResult(group)),
-          takeUntilDestroyed(this.destroyRef)
-        )
-        .subscribe();
-    });
 
     void this.loadHighSchools();
     this.loadSubjectClassifications();
@@ -269,7 +284,14 @@ export class SubjectSearchComponent implements OnInit {
     this.groupsError.set(null);
 
     try {
-      const response = await this.admissionService.getSubjectGroupsBySchool(schoolCode).toPromise();
+      const yearsResponse = await firstValueFrom(this.admissionService.getAcademicYears(schoolCode));
+      const years = yearsResponse?.data ?? [];
+      this.academicYears.set(years);
+      const selectedYear = years[0] ?? '';
+      this.selectedAcademicYear.set(selectedYear);
+      const response = selectedYear
+        ? await firstValueFrom(this.admissionService.getSubjectGroupsBySchool(schoolCode, selectedYear))
+        : await firstValueFrom(this.admissionService.getSubjectGroupsBySchool(schoolCode));
       this.subjectGroups.set(response?.data ?? []);
     } catch (error) {
       this.subjectGroups.set([]);
@@ -286,9 +308,19 @@ export class SubjectSearchComponent implements OnInit {
     this.selectedSchoolCode.set(schoolCode);
 
     this.subjectGroups.set([]);
+    this.groupFilter.set('');
+    this.comparedGroupCodes.set([]);
+    this.academicYears.set([]);
+    this.selectedAcademicYear.set('');
     this.selectedGroup.set(null);
     this.searchResult.set(null);
     this.searchError.set(null);
+    this.searchRequestId++;
+    this.isSearchLoading.set(false);
+    this.recommendations.set(null);
+    this.recommendationError.set(null);
+    this.preferredSubjectCodes.set([]);
+    this.confidenceBySubjectCode.set({});
     this.groupsError.set(null);
 
     if (schoolCode === '') {
@@ -299,34 +331,106 @@ export class SubjectSearchComponent implements OnInit {
     void this.loadSubjectGroups(schoolCode);
   }
 
-  /** Bước 3: chọn nhóm môn → trích mã môn → tự động tra cứu. */
-  protected onGroupSelect(group: SubjectGroupDto): void {
-    if (this.isSearchLoading()) {
-      return;
-    }
-    this.selectedGroup.set(group);
+  protected async onAcademicYearChange(event: Event): Promise<void> {
+    const year = (event.target as HTMLSelectElement).value;
+    this.selectedAcademicYear.set(year);
+    const schoolCode = this.selectedSchoolCode();
+    this.selectedGroup.set(null);
     this.searchResult.set(null);
     this.searchError.set(null);
-    this.searchSubject.next(group);
+    this.searchRequestId++;
+    this.isSearchLoading.set(false);
+    this.recommendations.set(null);
+    this.comparedGroupCodes.set([]);
+    this.isGroupsLoading.set(true);
+    try {
+      const response = await firstValueFrom(this.admissionService.getSubjectGroupsBySchool(schoolCode, year));
+      this.subjectGroups.set(response.data ?? []);
+    } catch (error: unknown) {
+      this.subjectGroups.set([]);
+      this.groupsError.set(this.admissionService.extractErrorMessage(error));
+    } finally {
+      this.isGroupsLoading.set(false);
+    }
   }
 
-  /** Gọi API tra cứu với danh sách subject_code của nhóm. */
-  private fetchSearchResult(group: SubjectGroupDto): void {
-    const subjectCodes = group.subjects.map((subject) => subject.code);
+  protected togglePreferredSubject(code: string, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.preferredSubjectCodes.update((codes) => checked
+      ? [...new Set([...codes, code])]
+      : codes.filter((item) => item !== code));
+  }
 
+  protected onGroupFilter(event: Event): void {
+    this.groupFilter.set((event.target as HTMLInputElement).value);
+  }
+
+  protected toggleCompare(group: SubjectGroupDto, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.comparedGroupCodes.update((codes) => {
+      if (checked && codes.length >= 3) return codes;
+      return checked ? [...codes, group.groupCode] : codes.filter((code) => code !== group.groupCode);
+    });
+  }
+
+  protected onConfidenceChange(code: string, event: Event): void {
+    const rawValue = (event.target as HTMLSelectElement).value;
+    this.confidenceBySubjectCode.update((scores) => {
+      if (!rawValue) {
+        const { [code]: _removed, ...remaining } = scores;
+        return remaining;
+      }
+      return { ...scores, [code]: Number(rawValue) };
+    });
+  }
+
+  protected async requestRecommendations(): Promise<void> {
+    const schoolCode = this.selectedSchoolCode();
+    if (!schoolCode || (!this.preferredSubjectCodes().length && !Object.keys(this.confidenceBySubjectCode()).length)) {
+      this.recommendationError.set('Hãy chọn ít nhất một môn yêu thích hoặc tự đánh giá mức độ tự tin.');
+      return;
+    }
+    this.isRecommendationLoading.set(true);
+    this.recommendationError.set(null);
+    try {
+      const response = await firstValueFrom(this.admissionService.recommendSubjectGroups(schoolCode, {
+        academicYear: this.selectedAcademicYear(),
+        preferredSubjectCodes: [...this.preferredSubjectCodes()],
+        confidenceBySubjectCode: this.confidenceBySubjectCode(),
+        topK: 3
+      }));
+      this.recommendations.set(response.data);
+    } catch (error: unknown) {
+      this.recommendationError.set(this.admissionService.extractErrorMessage(error));
+    } finally {
+      this.isRecommendationLoading.set(false);
+    }
+  }
+
+  /** Chọn nhóm để xem chi tiết; gợi ý Top 3 chỉ chạy khi học sinh bấm nút riêng. */
+  protected onGroupSelect(group: SubjectGroupDto): void {
+    this.selectedGroup.set(group);
+    this.recommendations.set(null);
+    void this.fetchSearchResult(group);
+  }
+
+  private async fetchSearchResult(group: SubjectGroupDto): Promise<void> {
+    const requestId = ++this.searchRequestId;
     this.isSearchLoading.set(true);
-    this.admissionService
-      .searchBySubjects({ subjectCodes })
-      .subscribe({
-        next: (response) => {
-          this.searchResult.set(response.data);
-          this.isSearchLoading.set(false);
-        },
-        error: (error: unknown) => {
-          this.searchError.set(this.admissionService.extractErrorMessage(error));
-          this.isSearchLoading.set(false);
-        }
-      });
+    this.searchResult.set(null);
+    this.searchError.set(null);
+    try {
+      const response = await firstValueFrom(this.admissionService.searchBySubjects({
+        subjectCodes: group.subjects.map((subject) => subject.code)
+      }));
+      if (requestId === this.searchRequestId) this.searchResult.set(response.data);
+    } catch (error: unknown) {
+      if (requestId === this.searchRequestId) {
+        this.searchError.set(this.admissionService.extractErrorMessage(error));
+      }
+    } finally {
+      if (requestId === this.searchRequestId) this.isSearchLoading.set(false);
+    }
   }
 
   /** Format tên đầy đủ của nhóm môn (dùng cho aria-label). */
