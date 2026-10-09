@@ -24,9 +24,32 @@ export interface SubjectDto {
 
 /** Nhóm môn học của một trường THPT (Bước 2). */
 export interface SubjectGroupDto {
+  academicYear: string;
   groupCode: string;
   groupName: string;
   subjects: SubjectDto[];
+}
+
+export interface SubjectGroupRecommendationRequest {
+  academicYear: string;
+  preferredSubjectCodes: string[];
+  confidenceBySubjectCode: Record<string, number>;
+  topK: number;
+}
+
+export interface SubjectGroupRecommendationDto extends SubjectGroupDto {
+  score: number;
+  matchedPreferredSubjects: SubjectDto[];
+  lowConfidenceSubjects: SubjectDto[];
+  explanations: string[];
+}
+
+export interface SubjectGroupRecommendationsResponse {
+  schoolCode: string;
+  academicYear: string;
+  requestedTopK: number;
+  eligibleGroupCount: number;
+  recommendations: SubjectGroupRecommendationDto[];
 }
 
 /** Request body khi tra cứu tổ hợp xét tuyển theo danh sách môn (Bước 3). */
@@ -86,9 +109,23 @@ export class AdmissionService {
   }
 
   /** Bước 2: Lấy danh sách nhóm môn của một trường THPT. */
-  getSubjectGroupsBySchool(schoolCode: string): Observable<ApiResponse<SubjectGroupDto[]>> {
+  getSubjectGroupsBySchool(schoolCode: string, academicYear?: string): Observable<ApiResponse<SubjectGroupDto[]>> {
+    const url = `${this.apiUrl}/api/v1/high-schools/${encodeURIComponent(schoolCode)}/subject-groups`;
     return this.http.get<ApiResponse<SubjectGroupDto[]>>(
-      `${this.apiUrl}/api/v1/high-schools/${encodeURIComponent(schoolCode)}/subject-groups`
+      academicYear ? `${url}?academicYear=${encodeURIComponent(academicYear)}` : url
+    );
+  }
+
+  getAcademicYears(schoolCode: string): Observable<ApiResponse<string[]>> {
+    return this.http.get<ApiResponse<string[]>>(
+      `${this.apiUrl}/api/v1/high-schools/${encodeURIComponent(schoolCode)}/academic-years`
+    );
+  }
+
+  recommendSubjectGroups(schoolCode: string, request: SubjectGroupRecommendationRequest): Observable<ApiResponse<SubjectGroupRecommendationsResponse>> {
+    return this.http.post<ApiResponse<SubjectGroupRecommendationsResponse>>(
+      `${this.apiUrl}/api/v1/high-schools/${encodeURIComponent(schoolCode)}/subject-groups/recommendations`,
+      request
     );
   }
 

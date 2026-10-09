@@ -289,6 +289,14 @@
 
           <!-- BƯỚC 2: Chọn nhóm môn học -->
           @if (selectedSchoolCode() !== '') {
+          @if (academicYears().length > 0) {
+          <label class="academic-year-control">
+            <span>Năm học áp dụng</span>
+            <select [value]="selectedAcademicYear()" (change)="onAcademicYearChange($event)">
+              @for (year of academicYears(); track year) { <option [value]="year">{{ year }}</option> }
+            </select>
+          </label>
+          }
           <div class="engine-step engine-step--divider" aria-labelledby="step-group-title">
             <div class="engine-step__header">
               <div class="step-badge step-badge--accent">
@@ -298,7 +306,7 @@
               <div class="engine-step__info">
                 <h3 id="step-group-title" class="engine-step__title">Chọn Nhóm Môn Định Hướng</h3>
                 <p class="engine-step__desc">
-                  Nhấp chọn một nhóm môn học lớp 10-12 của bạn để hệ thống tự động đối soát tổ hợp xét tuyển.
+                  Chọn năm học để xem đúng các nhóm 4 môn trường đang tổ chức. Đây là nhóm môn học THPT, không phải tổ hợp xét tuyển đại học.
                 </p>
               </div>
             </div>
@@ -340,11 +348,16 @@
               <p class="empty-state__text">Trường này hiện chưa có dữ liệu nhóm môn học trong CSDL.</p>
             </div>
             } @else {
+            <label class="group-filter">
+              <span>Lọc nhóm theo tên hoặc môn học</span>
+              <input type="search" placeholder="Ví dụ: Tin học, KHTN…" (input)="onGroupFilter($event)">
+            </label>
             <div class="group-grid" role="listbox" aria-label="Danh sách nhóm môn học">
-              @for (group of subjectGroups(); track group.groupCode) {
+              @for (group of filteredSubjectGroups(); track group.groupCode) {
+              <div class="group-choice">
               <button type="button" role="option" class="group-card"
                 [class.group-card--active]="selectedGroup()?.groupCode === group.groupCode"
-                [attr.aria-selected]="selectedGroup()?.groupCode === group.groupCode" [disabled]="isSearchLoading()"
+                [attr.aria-selected]="selectedGroup()?.groupCode === group.groupCode"
                 (click)="onGroupSelect(group)">
                 <div class="group-card__top">
                   <div class="group-card__headings">
@@ -369,6 +382,120 @@
                   </div>
                 </div>
               </button>
+              @if (showGroupComparison) {
+              <label class="compare-toggle"><input type="checkbox" [checked]="comparedGroupCodes().includes(group.groupCode)"
+                [disabled]="!comparedGroupCodes().includes(group.groupCode) && comparedGroupCodes().length >= 3"
+                (change)="toggleCompare(group, $event)"> So sánh</label>
+              }
+              </div>
+              }
+            </div>
+            @if (showGroupComparison && comparedGroups().length > 1) {
+            <div class="group-comparison" aria-live="polite">
+              <h3>So sánh {{ comparedGroups().length }} nhóm</h3>
+              @for (group of comparedGroups(); track group.groupCode) {
+              <article><strong>{{ group.groupName }}</strong><span>{{ group.subjects.length }} môn</span>
+                <div class="group-card__chips">@for (subject of group.subjects; track subject.code) { <span class="group-card__chip">{{ subject.name }}</span> }</div>
+              </article>
+              }
+            </div>
+            }
+            }
+
+            <section id="results" class="group-analysis scroll-section" aria-labelledby="result-title">
+              <div class="section-header">
+                <span class="result-badge">KẾT QUẢ PHÂN TÍCH KHỐI THI</span>
+                <h3 id="result-title" class="section-header__title">
+                  @if (selectedGroup(); as group) { {{ group.groupName }} } @else { Chọn một nhóm môn để xem kết quả }
+                </h3>
+              </div>
+              @if (isSearchLoading()) {
+              <div class="result-card result-card--loading" aria-live="polite" aria-busy="true">
+                <div class="loading-box">
+                  <div class="spinner-orbit" aria-hidden="true"></div>
+                  <h4 class="loading-box__title">Đang phân tích nhóm môn đã chọn…</h4>
+                  <p class="loading-box__desc">Đang đối chiếu các tổ hợp xét tuyển đại học có đủ các môn này.</p>
+                </div>
+              </div>
+              } @else if (searchError()) {
+              <div class="engine-alert engine-alert--error" role="alert">{{ searchError() }}</div>
+              } @else if (searchResult(); as result) {
+              <div class="result-card">
+                <div class="kpi-grid">
+                  <div class="kpi-card kpi-card--primary"><div class="kpi-card__body"><span class="kpi-card__value">{{ result.totalCombinations }}</span><span class="kpi-card__label">Tổ hợp xét tuyển</span></div></div>
+                  <div class="kpi-card kpi-card--accent"><div class="kpi-card__body"><span class="kpi-card__value">{{ result.totalMajors }}</span><span class="kpi-card__label">Ngành đào tạo</span></div></div>
+                  <div class="kpi-card kpi-card--success"><div class="kpi-card__body"><span class="kpi-card__value">{{ result.totalUniversities }}</span><span class="kpi-card__label">Trường đại học</span></div></div>
+                </div>
+                @if (result.possibleCombinations.length > 0) {
+                <div class="combos-wrapper">
+                  <div class="combos-wrapper__header"><h4 class="combos-wrapper__title">Các tổ hợp có thể đối chiếu</h4><span class="combos-wrapper__count">{{ result.possibleCombinations.length }}</span></div>
+                  <div class="combo-grid">@for (combination of result.possibleCombinations; track combination.combinationId) {
+                    <article class="combo-card"><div class="combo-card__info-col"><h5 class="combo-card__name">{{ combination.combinationDisplay }}</h5></div></article>
+                  }</div>
+                </div>
+                } @else {
+                <p class="empty-state__text">Chưa tìm thấy tổ hợp xét tuyển nào khớp đầy đủ với nhóm môn này.</p>
+                }
+                <small>Kết quả này chỉ để tham khảo các tổ hợp đại học hiện có; lựa chọn nhóm môn THPT vẫn dựa trên sở thích và định hướng học tập của em.</small>
+              </div>
+              } @else {
+              <div class="result-placeholder">
+                <p class="result-placeholder__desc">Chọn bất kỳ nhóm môn nào ở trên để tự động tra cứu tổ hợp xét tuyển, ngành và trường đại học có thể đối chiếu.</p>
+              </div>
+              }
+            </section>
+
+            @if (electiveSubjects().length > 0) {
+            <div class="student-preferences">
+              <h3>Điều em quan tâm</h3>
+              <p>Chọn môn yêu thích và tự đánh giá mức tự tin (1 = chưa tự tin, 5 = rất tự tin). Có thể bỏ qua một trong hai phần.</p>
+              <div class="preference-subjects">
+                @for (subject of electiveSubjects(); track subject.code) {
+                <label class="preference-subject">
+                  <input type="checkbox" [checked]="preferredSubjectCodes().includes(subject.code)"
+                    (change)="togglePreferredSubject(subject.code, $event)">
+                  <span>{{ subject.name }}</span>
+                  <select [attr.aria-label]="'Mức tự tin môn ' + subject.name"
+                    (change)="onConfidenceChange(subject.code, $event)">
+                    <option value="">Chưa đánh giá</option>
+                    @for (rating of [1, 2, 3, 4, 5]; track rating) {
+                    <option [value]="rating" [selected]="confidenceBySubjectCode()[subject.code] === rating">{{ rating }}/5</option>
+                    }
+                  </select>
+                </label>
+                }
+              </div>
+              <button type="button" class="recommend-button" (click)="requestRecommendations()"
+                [disabled]="isRecommendationLoading()">
+                {{ isRecommendationLoading() ? 'Đang xếp hạng…' : 'Gợi ý Top 3 nhóm môn phù hợp' }}
+              </button>
+              @if (recommendationError()) { <p class="recommendation-error" role="alert">{{ recommendationError() }}</p> }
+              @if (recommendations(); as result) {
+              <div class="recommendation-results" aria-live="polite">
+                <h3>Gợi ý cho năm học {{ result.academicYear }}</h3>
+                @if (result.recommendations.length === 0) {
+                <p>Chưa có nhóm đủ 4 môn trong dữ liệu năm học này.</p>
+                }
+                @for (item of result.recommendations; track item.groupCode; let rank = $index) {
+                <article class="recommendation-card">
+                  <div class="recommendation-card__heading"><strong>#{{ rank + 1 }} · {{ item.groupName }}</strong><span>{{ item.score }}% phù hợp</span></div>
+                  <p>{{ item.subjects.length }} môn:</p>
+                  <div class="group-card__chips">
+                    @for (subject of item.subjects; track subject.code) { <span class="group-card__chip">{{ subject.name }}</span> }
+                  </div>
+                  @if (item.matchedPreferredSubjects.length > 0) {
+                  <p>Môn yêu thích trùng khớp:
+                    @for (subject of item.matchedPreferredSubjects; track subject.code; let last = $last) { {{ subject.name }}{{ last ? '' : ', ' }} }
+                  </p>
+                  }
+                  @if (item.lowConfidenceSubjects.length > 0) {
+                  <p>Nên tìm hiểu thêm: @for (subject of item.lowConfidenceSubjects; track subject.code; let last = $last) { {{ subject.name }}{{ last ? '' : ', ' }} }</p>
+                  }
+                  <ul>@for (explanation of item.explanations; track explanation) { <li>{{ explanation }}</li> }</ul>
+                </article>
+                }
+                <small>Điểm phù hợp chỉ hỗ trợ khám phá lựa chọn, không dự đoán kết quả tuyển sinh hay mức độ đủ điều kiện.</small>
+              </div>
               }
             </div>
             }
@@ -378,7 +505,7 @@
       </section>
 
       <!-- PHÂN VÙNG 3: KHỐI KẾT QUẢ (RESULT BOX) -->
-      <section id="results" class="result-section scroll-section" aria-labelledby="result-title">
+      <section id="legacy-results" class="result-section scroll-section" aria-labelledby="legacy-result-title" hidden aria-hidden="true">
         @if (isSearchLoading()) {
         <div class="result-card result-card--loading" aria-busy="true">
           <div class="loading-box">
@@ -402,7 +529,7 @@
           <div class="result-header">
             <div class="result-header__lead">
               <span class="result-badge">KẾT QUẢ PHÂN TÍCH</span>
-              <h3 id="result-title" class="result-header__title">
+              <h3 id="legacy-result-title" class="result-header__title">
                 Các Khối Thi Phù Hợp Với Nhóm Môn
                 @if (selectedGroup(); as group) {
                 <span class="result-header__highlight">{{ group.groupName }}</span>
@@ -517,6 +644,22 @@
             </p>
           </div>
           }
+      </section>
+
+      <!-- PHÂN VÙNG: TRỢ LÝ AI TƯ VẤN TUYỂN SINH (RAG CHATBOT) -->
+      <section id="ai-advisor" class="ai-advisor-section scroll-section" aria-labelledby="ai-advisor-title">
+        <div class="section-header text-center">
+          <span class="section-tag">TRÍ TUỆ NHÂN TẠO • GRAPHRAG</span>
+          <h2 id="ai-advisor-title" class="section-header__title">Trợ Lý AI Tư Vấn Tuyển Sinh &amp; Chọn Môn</h2>
+          <p class="section-header__desc">
+            Hỏi đáp thông minh kết hợp Đồ thị tri thức (Neo4j). Tra cứu điểm chuẩn, phương thức xét tuyển
+            và định hướng chọn môn THPT theo chương trình GDPT 2018.
+          </p>
+        </div>
+
+        <div class="ai-advisor-container">
+          <app-chat-panel />
+        </div>
       </section>
 
       <!-- PHÂN VÙNG 4: GIẢI ĐÁP & TẠI SAO NÊN DÙNG HỆ THỐNG (FAQ) -->

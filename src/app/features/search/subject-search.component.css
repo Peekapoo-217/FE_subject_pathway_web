@@ -1333,6 +1333,17 @@
   line-height: 1.55;
 }
 
+/* ── PHÂN VÙNG: TRỢ LÝ AI TƯ VẤN TUYỂN SINH (RAG CHATBOT) ── */
+.ai-advisor-section {
+  position: relative;
+  z-index: 10;
+  margin-bottom: 8px;
+}
+
+.ai-advisor-container {
+  width: 100%;
+}
+
 /* ── 7. PHÂN VÙNG 4: WHY CHOOSE US (FAQ) ── */
 .why-section {
   background: #fff;
@@ -1687,3 +1698,30 @@
     grid-template-columns: 1fr;
   }
 }
+.academic-year-control,
+.student-preferences { display: block; margin: 1.5rem 0; }
+.academic-year-control span { display: block; margin-bottom: .5rem; font-weight: 600; }
+.academic-year-control select,
+.preference-subject select { border: 1px solid #cbd5e1; border-radius: .5rem; padding: .55rem .75rem; background: white; }
+.student-preferences { padding: 1.25rem; border: 1px solid #dbe4f0; border-radius: .9rem; background: #f8fafc; }
+.student-preferences h3 { margin: 0 0 .4rem; }
+.preference-subjects { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: .6rem; margin: 1rem 0; }
+.preference-subject { display: flex; align-items: center; gap: .55rem; padding: .65rem; border: 1px solid #e2e8f0; border-radius: .6rem; background: white; }
+.preference-subject span { flex: 1; }
+.recommend-button { border: 0; border-radius: .6rem; padding: .8rem 1rem; color: white; background: #2563eb; font-weight: 600; cursor: pointer; }
+.recommend-button:disabled { opacity: .65; cursor: wait; }
+.recommendation-results { display: grid; gap: .75rem; margin-top: 1.25rem; }
+.recommendation-card { padding: 1rem; border: 1px solid #cbd5e1; border-radius: .75rem; background: white; }
+.recommendation-card__heading { display: flex; justify-content: space-between; gap: 1rem; }
+.recommendation-card ul { margin: .5rem 0; padding-left: 1.25rem; }
+.recommendation-card p { margin: .65rem 0 .35rem; }
+.recommendation-error { color: #b91c1c; }
+.group-analysis { margin: 1.75rem 0 2rem; scroll-margin-top: 5rem; }
+.group-analysis .section-header { margin-bottom: 1rem; }
+[hidden] { display: none !important; }
+.group-filter { display: grid; gap: .4rem; margin: .75rem 0 1rem; max-width: 32rem; }
+.group-filter input { border: 1px solid #cbd5e1; border-radius: .5rem; padding: .65rem .75rem; }
+.group-choice { display: grid; align-content: start; gap: .4rem; }
+.compare-toggle { justify-self: end; display: flex; align-items: center; gap: .4rem; font-size: .9rem; }
+.group-comparison { display: grid; gap: .6rem; margin-top: 1rem; padding: 1rem; border-radius: .75rem; background: #eff6ff; }
+.group-comparison article { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; padding: .6rem; background: white; border-radius: .5rem; }
