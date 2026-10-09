@@ -1719,6 +1719,15 @@
 .group-analysis { margin: 1.75rem 0 2rem; scroll-margin-top: 5rem; }
 .group-analysis .section-header { margin-bottom: 1rem; }
 [hidden] { display: none !important; }
+.analysis-tabs { display: flex; gap: .5rem; margin: 1rem 0; border-bottom: 1px solid #dbe4f0; }
+.analysis-tabs button { padding: .7rem 1rem; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #475569; cursor: pointer; }
+.analysis-tabs .analysis-tab--active { border-bottom-color: #2563eb; color: #1d4ed8; font-weight: 700; }
+.university-filter { display: grid; gap: .4rem; max-width: 32rem; margin: 1rem 0; font-weight: 600; }
+.university-filter select { width: 100%; padding: .7rem .75rem; border: 1px solid #cbd5e1; border-radius: .5rem; background: #fff; color: #0f172a; font: inherit; }
+.university-filter select:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.majors-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: .7rem; }
+.major-card { display: flex; align-items: baseline; gap: .7rem; padding: .9rem 1rem; border: 1px solid #dbe4f0; border-radius: .65rem; background: white; }
+.major-card__code { color: #64748b; font-size: .85rem; white-space: nowrap; }
 .group-filter { display: grid; gap: .4rem; margin: .75rem 0 1rem; max-width: 32rem; }
 .group-filter input { border: 1px solid #cbd5e1; border-radius: .5rem; padding: .65rem .75rem; }
 .group-choice { display: grid; align-content: start; gap: .4rem; }
