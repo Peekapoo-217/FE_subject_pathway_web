@@ -63,6 +63,13 @@ export interface CombinationDto {
   combinationId: CombinationCode;
   combinationDisplay: string;
   componentCount: number;
+  labels: CombinationLabelDto[];
+}
+
+/** Mã tổ hợp và danh sách môn chi tiết lấy từ danh mục bên ngoài. */
+export interface CombinationLabelDto {
+  code: string;
+  subjectDetails: string;
 }
 
 /** Ngành đào tạo xuất hiện qua ít nhất một tổ hợp phù hợp. */
