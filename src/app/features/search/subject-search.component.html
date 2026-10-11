@@ -439,6 +439,9 @@
                     <article class="combo-card">
                       <div class="combo-card__info-col">
                         <h5 class="combo-card__name">{{ combination.combinationDisplay }}</h5>
+                        @for (label of combination.labels; track label.code + label.subjectDetails) {
+                        <span class="combo-card__sub">{{ label.code }} — {{ label.subjectDetails }}</span>
+                        }
                       </div>
                     </article>
                     }
@@ -612,6 +615,9 @@
                   {{ idx + 1 < 10 ? '0' + (idx + 1) : (idx + 1) }} </div>
                     <div class="combo-card__info-col">
                       <h5 class="combo-card__name">{{ combination.combinationDisplay }}</h5>
+                      @for (label of combination.labels; track label.code + label.subjectDetails) {
+                      <span class="combo-card__sub">{{ label.code }} — {{ label.subjectDetails }}</span>
+                      }
                     </div>
                 </div>
                 }
