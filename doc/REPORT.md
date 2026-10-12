@@ -1,5 +1,98 @@
 # REPORT - FE_subject_pathway_web
 
+## Cải thiện UI/UX trang quản trị — 2026-10-12
+
+- [x] Giữ tab ngang, làm mới giao diện responsive cho tài liệu THPT, người dùng, tổ hợp xét tuyển và cấu hình AI.
+- [x] Tách template/SCSS khỏi TypeScript; bổ sung nhãn tiếng Việt, phân cấp nút, badge trạng thái, focus dễ nhận biết và hỗ trợ reduced motion.
+- [x] Bổ sung trạng thái tải, lỗi có nút thử lại và trạng thái danh sách trống cho từng phân hệ/danh sách.
+- [x] Thay hộp thoại trình duyệt khi sửa tài liệu và từ chối bản nháp bằng form trên trang; thêm xác nhận trước khi lưu trữ tổ hợp.
+- [x] Thêm test tương tác cho trạng thái lỗi, retry, validation mật khẩu, sửa tài liệu và xác nhận lưu trữ.
+- [x] `npm test -- --watch=false --browsers=ChromeHeadless`: 39 test đạt. `npm run build`: production build đạt.
+- [x] Chỉ thay đổi frontend; không đổi API, quyền backend, schema hoặc dependency.
+
+### Tinh giản giao diện admin
+
+- [x] Giảm bóng đổ, bo góc, màu nền và chuyển động; đưa tab về gạch chân xanh, nút và bảng về kiểu cơ bản gần giao diện ban đầu.
+- [x] Chỉ chỉnh stylesheet admin; giữ nguyên template, API và các tương tác.
+- [x] Production build thành công. Không chạy lại unit test do thay đổi chỉ giới hạn ở CSS.
+
+## Access token trong bộ nhớ và refresh cookie — 2026-10-12
+
+- [x] Chốt contract với backend: cookie HttpOnly, khôi phục phiên, nhiều tab và logout ngay.
+- [x] F1. Auth state trong bộ nhớ, bootstrap, interceptor và guard.
+- [x] F2. Web Locks/BroadcastChannel, trạng thái lỗi và logout trên header.
+- [x] F3. 36 test frontend đạt, production build thành công; kiểm tra Chrome hai tab với API thật đạt.
+- [x] F4. Tổng kết thay đổi và hướng dẫn cấu hình.
+
+### Thay đổi hiện hành
+
+- `AuthService` giữ access token và user trong bộ nhớ; xóa key auth cũ trong session/local storage khi khởi tạo. Frontend không đọc hoặc lưu refresh token.
+- GET CSRF rồi POST auth với credentials/header; refresh/logout không gửi token trong JSON. Khôi phục phiên sau tải lại trang, guard chờ kết quả, header hiển thị trạng thái và thao tác thử lại khi lỗi tạm thời.
+- Interceptor chỉ gắn Bearer cho đúng origin/path backend, gom refresh đồng thời trong một tab, thử lại request một lần. Lỗi nghiệp vụ 403/500 sau retry không xóa phiên; không gửi token tới RAG hoặc domain khác.
+- `SessionCoordinator` dùng Web Locks cho thao tác cookie và BroadcastChannel cho sự kiện đổi phiên/logout. Sự kiện không chứa token. Response refresh cũ không khôi phục được phiên đã logout.
+- Logout báo lỗi và cho phép thử lại nếu backend chưa xác nhận thu hồi. Logout từ tab khác cũng xóa state và đưa trang admin về login.
+- `/admin` render ở browser; các trang public vẫn prerender. Không gọi khôi phục auth trên server, không đưa token vào HTML/transfer cache và không có state token dùng chung giữa request SSR.
+- Production `API_URL=''` để reverse proxy phục vụ `/api/v1/` cùng origin; development vẫn dùng `http://localhost:8080` và frontend `http://localhost:4200`.
+
+### Kiểm chứng đã thực hiện
+
+- `npm test -- --watch=false --browsers=ChromeHeadless`: **36 test đạt**, gồm test storage/memory, HTTP/CSRF, single flight, 401/403/500/503, logout lỗi, response muộn, guard và Web Locks/BroadcastChannel thật trong browser.
+- `npm run build`: thành công, 3 route public prerender; admin render client.
+- Chrome headless, profile tạm riêng, frontend đang chạy tại localhost:4200 và backend Docker: login SUPER_ADMIN đạt; cookie HttpOnly/SameSite/path đúng; JavaScript không đọc được refresh cookie; không có token trong session/local storage; mở admin ở tab thứ hai, reload đồng thời cả hai tab giữ phiên; logout đưa cả hai khỏi admin.
+- `git diff --check`: không có lỗi whitespace. Mật khẩu tối thiểu 6 ký tự và trạng thái đỏ cho form sai vẫn được kiểm tra trong bộ test.
+
+### Cấu hình cho phiên sau
+
+- Dùng browser hiện đại có Web Locks/BroadcastChannel, HTTPS production hoặc localhost development. Không có cơ chế fallback ghi token xuống storage.
+- Backend phải chạy contract Redis/cookie mới. Đăng nhập lại sau cập nhật; production reverse proxy phải giữ Set-Cookie và route `/api/v1/` tới backend.
+- Redis ngừng hoạt động có thể khiến khôi phục phiên/API có xác thực báo lỗi; UI giữ token đang có khi lỗi tạm thời và cho phép thử lại. Đây là hành vi đã chọn để logout có hiệu lực ngay.
+
+
+## Validation form mật khẩu 6 ký tự — 2026-10-12
+
+- [x] Form đăng ký và tạo người dùng trong admin áp dụng tối thiểu 6 ký tự, hiện viền đỏ và lời nhắc sát ô không hợp lệ; xác nhận mật khẩu sai cũng được đánh dấu đỏ.
+- [x] Không gửi request khi form chưa hợp lệ. Thêm test cho mật khẩu 5 ký tự và xác nhận không khớp.
+- [x] Xác nhận production build và toàn bộ 36 test giao diện ở đợt cập nhật auth Redis/cookie.
+
+
+## Thông báo lỗi cho khách hàng — 2026-10-12
+
+- [x] Login, quản trị, tra cứu và chat dùng chung hàm đọc `ApiResponse.message` và thông báo theo trạng thái HTTP.
+- [x] Với HTTP 500 trở lên, giao diện chỉ hiển thị thông báo chung, không chuyển chi tiết kỹ thuật từ response đến khách hàng.
+- [x] Kiểm tra `npm test -- --watch=false --browsers=ChromeHeadless` (20 test) và `npm run build` thành công.
+
+## Admin THPT và quản trị hệ thống — 2026-10-12
+
+- [x] Đăng nhập, duy trì access/refresh token và xử lý hết phiên.
+- [x] Màn quản trị tài liệu PDF, trạng thái trích xuất, xem/chỉnh sửa bản nháp và evidence trang.
+- [x] Màn phê duyệt SUPER_ADMIN cho trường/nhóm môn mới và yêu cầu xóa.
+- [x] CRUD người dùng, tổ hợp tuyển sinh, cấu hình LLM theo role.
+- [x] Dùng cursor API để tải thêm, giữ trạng thái bộ lọc khi chuyển trang.
+- [x] Cập nhật test và ghi lệnh kiểm tra đã chạy.
+
+Khởi động: ban đầu chờ contract endpoint từ backend; contract hiện được liệt kê trong backend `docs/openapi.md`. R2 được truy cập qua API backend, không đưa secret vào trình duyệt.
+
+Kiểm tra trước cập nhật auth UI: `npm run build` thành công; `npm test -- --watch=false --browsers=ChromeHeadless` đạt 8 test. Việc gọi API admin end-to-end vẫn cần backend đã chạy với migration V6 và cấu hình môi trường phù hợp.
+
+### Header login/register và trạng thái phiên (2026-10-12)
+
+- Header dùng chung đã có trên mọi route. Khi chưa đăng nhập, hiển thị liên kết `/login` và `/register`; khi đăng nhập, hiển thị tài khoản, nút đăng xuất, và mục Quản trị cho ADMIN/SUPER_ADMIN.
+- `/register` mở form tạo tài khoản USER riêng; `/login` mở form đăng nhập. Cả hai dùng chung component và vẫn có thể chuyển chế độ qua liên kết trong form.
+- AuthService phát trạng thái tài khoản qua signal để header cập nhật sau login, refresh, logout.
+- Kiểm tra lúc thêm header: `npm test -- --watch=false --browsers=ChromeHeadless` (10 test đạt); `npm run build` thành công.
+
+### Cải thiện giao diện login/register (2026-10-12)
+
+- Tách template và stylesheet khỏi component; thiết kế card hai cột theo nhận diện xanh của ứng dụng, tự chuyển thành một cột trên mobile.
+- Màn đăng ký có xác nhận mật khẩu, giới hạn tối thiểu 7 ký tự, thông báo lỗi rõ ràng, trạng thái gửi và nút hiện/ẩn mật khẩu có nhãn trợ năng.
+- Bổ sung test cho hiển thị login/register, mismatch mật khẩu, submit login/register và chuyển trạng thái hiện mật khẩu.
+- Kiểm tra: `npm test -- --watch=false --browsers=ChromeHeadless` (15 test đạt); `npm run build` thành công.
+
+### Đồng bộ validation mật khẩu bootstrap (2026-10-12)
+
+- Backend và form đăng ký frontend thống nhất mức tối thiểu 7 ký tự để tài khoản bootstrap `adminsp` có thể đăng nhập; OpenAPI ghi nhận điều kiện.
+- Regression tests: login với mật khẩu 7 ký tự được chấp nhận qua controller validation, 6 ký tự bị từ chối; frontend đăng ký kiểm tra được mật khẩu 7 ký tự.
+
 ## Admission combination labels
 Ngày triển khai: 2026-10-10.
 

@@ -3,9 +3,133 @@
   min-height: 100dvh;
 }
 
+.site-header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 clamp(18px, 5vw, 72px);
+  border-bottom: 1px solid #dce5ee;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 4px 18px rgba(24, 49, 76, 0.05);
+}
+
+.site-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #153b66;
+  font-size: 16px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.site-brand__mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  background: #1457bd;
+  color: white;
+  font-size: 18px;
+}
+
+.account-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.account-nav__link {
+  padding: 9px 10px;
+  color: #38516c;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.account-nav__link:hover,
+.account-nav__link.is-active {
+  color: #1457bd;
+}
+
+.account-nav__button {
+  padding: 9px 14px;
+  border: 1px solid #1457bd;
+  border-radius: 8px;
+  background: #1457bd;
+  color: white;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-nav__button:hover,
+.account-nav__button.is-active {
+  background: #0f469b;
+}
+
+.account-nav__button--quiet {
+  border-color: #c8d4e2;
+  background: white;
+  color: #38516c;
+}
+
+.account-nav__button--quiet:hover {
+  background: #f0f5fa;
+  color: #153b66;
+}
+
+.account-nav__user {
+  color: #253d56;
+  font-weight: 650;
+}
+
+.account-nav__role {
+  margin-left: 4px;
+  color: #718096;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .app-main {
   min-height: 100dvh;
   background:
     radial-gradient(1200px 500px at 50% -10%, rgba(242, 112, 29, 0.08), transparent 60%),
     linear-gradient(180deg, #f7fafc 0%, #eef4f9 100%);
 }
+
+@media (max-width: 560px) {
+  .site-header {
+    min-height: 60px;
+    gap: 10px;
+    padding: 0 14px;
+  }
+
+  .site-brand {
+    gap: 7px;
+    font-size: 13px;
+  }
+
+  .account-nav {
+    gap: 4px;
+    font-size: 12px;
+  }
+
+  .account-nav__user,
+  .account-nav__role {
+    display: none;
+  }
+
+  .account-nav__button {
+    padding: 8px 10px;
+  }
+}
+
+.session-notice { margin: 1rem auto; max-width: 72rem; padding: 1rem; color: #991b1b; background: #fef2f2; border-radius: .5rem; }

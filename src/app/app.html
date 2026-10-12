@@ -1,3 +1,32 @@
-<main class="app-main">
+<header class="site-header">
+  <a class="site-brand" routerLink="/" aria-label="EduGuidance Pathway - Trang chủ">
+    <span class="site-brand__mark" aria-hidden="true">E</span>
+    <span>{{ appTitle }}</span>
+  </a>
+
+  <nav class="account-nav" aria-label="Tài khoản">
+    @if (!auth.initialized() || auth.restoring()) {
+      <span role="status">Đang kiểm tra phiên…</span>
+    } @else if (auth.currentUser(); as user) {
+      @if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+        <a class="account-nav__link" routerLink="/admin" routerLinkActive="is-active">Quản trị</a>
+      }
+      <span class="account-nav__user">{{ user.username }} <span class="account-nav__role">{{ user.role }}</span></span>
+      <button class="account-nav__button account-nav__button--quiet" type="button" [disabled]="signingOut()" (click)="signOut()">{{ signingOut() ? 'Đang đăng xuất…' : 'Đăng xuất' }}</button>
+    } @else {
+      <a class="account-nav__link" routerLink="/login" routerLinkActive="is-active">Đăng nhập</a>
+      <a class="account-nav__button" routerLink="/register" routerLinkActive="is-active">Đăng ký</a>
+    }
+  </nav>
+</header>
+
+@if (auth.sessionError()) {
+  <p class="session-notice" role="alert">{{ auth.sessionError() }} <button type="button" (click)="restoreSession()">Thử lại</button></p>
+}
+@if (logoutError()) {
+  <p class="session-notice" role="alert">{{ logoutError() }}</p>
+}
+
+<div class="app-main">
   <router-outlet />
-</main>
+</div>

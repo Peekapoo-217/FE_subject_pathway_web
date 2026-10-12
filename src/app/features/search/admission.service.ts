@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
+import { getErrorMessage } from '../../core/http/error-message';
 
 /** Chuỗi mã môn học hợp lệ (khớp dữ liệu master của Backend). */
 export type SubjectCode = string;
@@ -108,14 +109,6 @@ export interface ApiResponse<T> {
 }
 
 /** Lỗi nghiệp vụ chuẩn từ Backend (HTTP 4xx/5xx với body ApiResponse). */
-interface ApiErrorBody {
-  code?: number;
-  message?: string;
-}
-
-/** Message thân thiện hiển thị khi request thất bại. */
-const FRIENDLY_HTTP_ERROR = 'Không thể kết nối tới máy chủ. Vui lòng thử lại sau.';
-
 /**
  * Service nghiệp vụ tra cứu tuyển sinh.
  * Chịu trách nhiệm duy nhất giao tiếp REST API Backend (SoC theo AGENTS.md).
@@ -168,16 +161,7 @@ export class AdmissionService {
 
   /** Trích message lỗi thân thiện từ lỗi HTTP của Backend. */
   extractErrorMessage(error: unknown): string {
-    if (this.isHttpErrorResponse(error)) {
-      const body = error.error as ApiErrorBody | null;
-      if (body && typeof body.message === 'string' && body.message.length > 0) {
-        return body.message;
-      }
-    }
-    return FRIENDLY_HTTP_ERROR;
+    return getErrorMessage(error, 'Không thể tải dữ liệu. Vui lòng thử lại.');
   }
 
-  private isHttpErrorResponse(error: unknown): error is { error: unknown } {
-    return typeof error === 'object' && error !== null && 'error' in error;
-  }
 }

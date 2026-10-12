@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { getErrorMessage } from '../../../core/http/error-message';
 import { ChatHistoryItem, ChatMessage, ChatRequest, ChatResponse } from '../models/chat.models';
 
 const WELCOME_TEXT = `Xin chào bạn! 🎓
@@ -81,10 +82,10 @@ export class ChatService {
 
       this.messages.update((prev) => [...prev, botMsg]);
     } catch (err: unknown) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : 'Không thể kết nối đến máy chủ RAG. Vui lòng kiểm tra lại server backend (http://localhost:8000).';
+      const errorMessage = getErrorMessage(
+        err,
+        'Không thể kết nối đến máy chủ tư vấn. Vui lòng thử lại sau.'
+      );
 
       this.error.set(errorMessage);
 

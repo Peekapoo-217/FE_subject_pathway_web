@@ -1,0 +1,107 @@
+<main class="auth-page">
+  <section class="auth-card" [class.auth-card--register]="registerMode" aria-labelledby="auth-title">
+    <div class="auth-form-panel">
+      <a class="auth-brand" routerLink="/" aria-label="EduGuidance Pathway - Trang chủ">
+        <span class="auth-brand__mark" aria-hidden="true">E</span>
+        <span>EduGuidance <strong>Pathway</strong></span>
+      </a>
+
+      <div class="auth-heading">
+        <p class="auth-eyebrow">{{ registerMode ? 'BẮT ĐẦU HÀNH TRÌNH' : 'CHÀO MỪNG BẠN TRỞ LẠI' }}</p>
+        <h1 id="auth-title">{{ registerMode ? 'Tạo tài khoản' : 'Đăng nhập' }}</h1>
+        <p class="auth-description">
+          {{ registerMode
+          ? 'Tạo tài khoản USER để tiếp tục khám phá lộ trình học tập và thông tin tuyển sinh.'
+          : 'Đăng nhập để tiếp tục sử dụng các công cụ định hướng học tập của bạn.' }}
+        </p>
+      </div>
+
+      <form class="auth-form" (ngSubmit)="submit(authForm)" #authForm="ngForm">
+        <label class="auth-field" for="username">
+          <span>Tên đăng nhập</span>
+          <input id="username" name="username" [(ngModel)]="username" #usernameModel="ngModel"
+            autocomplete="username" maxlength="80" placeholder="Nhập tên đăng nhập" required
+            [attr.aria-invalid]="usernameModel.invalid && usernameModel.touched"
+            [attr.aria-describedby]="usernameModel.invalid && usernameModel.touched ? 'username-error' : null">
+          <small *ngIf="usernameModel.invalid && usernameModel.touched" class="field-error" id="username-error">
+            Vui lòng nhập tên đăng nhập.
+          </small>
+        </label>
+
+        <label class="auth-field" for="password">
+          <span>Mật khẩu</span>
+          <span class="password-control">
+            <input id="password" name="password" [(ngModel)]="password" #passwordModel="ngModel"
+              [type]="passwordVisible() ? 'text' : 'password'"
+              [attr.autocomplete]="registerMode ? 'new-password' : 'current-password'"
+              [minlength]="registerMode ? 6 : null"
+              [placeholder]="registerMode ? 'Ít nhất 6 ký tự' : 'Nhập mật khẩu'" required
+              [attr.aria-invalid]="passwordModel.invalid && passwordModel.touched"
+              [attr.aria-describedby]="passwordModel.invalid && passwordModel.touched ? 'password-error' : null">
+            <button class="password-toggle" type="button" (click)="togglePasswordVisibility()"
+              [attr.aria-label]="passwordVisible() ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+              [attr.aria-pressed]="passwordVisible()">
+              {{ passwordVisible() ? 'Ẩn' : 'Hiện' }}
+            </button>
+          </span>
+          <small *ngIf="registerMode" class="field-hint">Dùng ít nhất 6 ký tự.</small>
+          <small *ngIf="passwordModel.invalid && passwordModel.touched" class="field-error" id="password-error">
+            {{ passwordModel.errors?.['required'] ? 'Vui lòng nhập mật khẩu.' : 'Mật khẩu cần ít nhất 6 ký tự.' }}
+          </small>
+        </label>
+
+        <label *ngIf="registerMode" class="auth-field" for="confirm-password">
+          <span>Nhập lại mật khẩu</span>
+          <input id="confirm-password" name="confirmPassword" [(ngModel)]="confirmPassword"
+            #confirmPasswordModel="ngModel" [type]="passwordVisible() ? 'text' : 'password'"
+            autocomplete="new-password" minlength="6" placeholder="Nhập lại mật khẩu" required
+            [class.is-invalid]="confirmPasswordModel.touched && confirmPassword !== password"
+            [attr.aria-invalid]="confirmPasswordModel.touched && (confirmPasswordModel.invalid || confirmPassword !== password)"
+            [attr.aria-describedby]="confirmPasswordModel.touched && (confirmPasswordModel.invalid || confirmPassword !== password) ? 'confirm-password-error' : null">
+          <small *ngIf="confirmPasswordModel.touched && (confirmPasswordModel.invalid || confirmPassword !== password)"
+            class="field-error" id="confirm-password-error">
+            {{ confirmPasswordModel.errors?.['required'] ? 'Vui lòng nhập lại mật khẩu.'
+              : confirmPasswordModel.errors?.['minlength'] ? 'Mật khẩu cần ít nhất 6 ký tự.'
+              : 'Mật khẩu xác nhận chưa khớp.' }}
+          </small>
+        </label>
+
+        <p *ngIf="error()" class="form-error" role="alert">{{ error() }}</p>
+
+        <button class="submit-button" type="submit" [disabled]="busy()">
+          <span *ngIf="busy()" class="loading-mark" aria-hidden="true"></span>
+          {{ busy() ? 'Đang xử lý…' : (registerMode ? 'Tạo tài khoản' : 'Đăng nhập') }}
+          <span *ngIf="!busy()" aria-hidden="true">→</span>
+        </button>
+      </form>
+
+      <p class="auth-switch" *ngIf="registerMode; else loginSwitch">
+        Đã có tài khoản?
+        <a routerLink="/login">Đăng nhập</a>
+      </p>
+      <ng-template #loginSwitch>
+        <p class="auth-switch">
+          Chưa có tài khoản?
+          <a routerLink="/register">Đăng ký</a>
+        </p>
+      </ng-template>
+
+    </div>
+
+    <aside class="auth-aside" aria-label="Giới thiệu EduGuidance Pathway">
+      <div class="aside-orbit aside-orbit--one"></div>
+      <div class="aside-orbit aside-orbit--two"></div>
+      <div class="aside-content">
+        <span class="aside-kicker">EDUGUIDANCE PATHWAY</span>
+        <h2>{{ registerMode ? 'Mỗi lựa chọn tốt bắt đầu từ sự hiểu mình.' : 'Chọn môn hôm nay, mở lối ngày mai.' }}</h2>
+        <p>Khám phá nhóm môn THPT, tổ hợp xét tuyển và hướng đi phù hợp với mục tiêu của bạn.</p>
+        <div class="aside-steps" aria-hidden="true">
+          <span><b>01</b> Khám phá</span>
+          <span><b>02</b> So sánh</span>
+          <span><b>03</b> Định hướng</span>
+        </div>
+      </div>
+      <div class="aside-footer"><span class="status-dot"></span> Thông tin học tập trong tầm tay</div>
+    </aside>
+  </section>
+</main>
