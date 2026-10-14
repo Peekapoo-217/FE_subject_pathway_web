@@ -53,6 +53,8 @@ h4 { margin: 10px 0 4px; color: #263f59; font-size: 16px; }
 .icon-tile { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 7px; background: #e7eef6; color: #315b85; font-size: 18px; }
 
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.code-hint { display: block; margin-top: 5px; color: #526578; font-size: 12px; line-height: 1.4; }
+.code-hint--error { color: #9f3028; }
 .form-grid label, .reject-form label { display: grid; min-width: 0; gap: 6px; color: #344b62; font-size: 13px; font-weight: 600; }
 .form-span { grid-column: 1 / -1; }
 input, select, textarea { box-sizing: border-box; width: 100%; min-width: 0; min-height: 38px; padding: 8px 10px; border: 1px solid #c6cfdd; border-radius: 6px; outline: 0; background: #fff; color: #263b50; font: inherit; font-size: 14px; }
@@ -127,11 +129,34 @@ code { padding: 2px 5px; border-radius: 4px; background: #f0f2f5; color: #3b536a
 .source-pages { color: #65778a; font-size: 12px; text-align: right; }
 .draft-fields { padding-bottom: 14px; border-bottom: 1px solid #e2e7ed; }
 .draft-actions { margin-top: 12px; }
+.draft-group { margin-top: 10px; overflow: hidden; border: 1px solid #dce2ec; border-radius: 9px; background: #fff; }
+.draft-group-toggle { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 0; background: #f7f9fc; color: #263f59; font: inherit; text-align: left; cursor: pointer; }
+.draft-group-toggle:hover { background: #f1f5fa; }
+.draft-group-toggle > span:first-child { display: grid; gap: 4px; }
+.draft-group-toggle small { color: #65778a; font-size: 12px; }
+.draft-group-kind { margin-left: 8px; padding: 2px 7px; border-radius: 10px; background: #eef2f7; color: #526578; font-size: 11px; font-weight: 600; }
+.draft-group-count { display: flex; align-items: center; gap: 9px; color: #526578; font-size: 12px; white-space: nowrap; }
+.draft-group-count span { color: #1457bd; font-size: 18px; font-weight: 600; }
+.draft-group-content { padding: 4px 14px 14px; }
+.review-publish-panel { display: grid; justify-items: start; gap: 10px; margin-top: 14px; padding: 14px; border: 1px solid #d8e3f2; border-radius: 8px; background: #f6f9fd; }
+.review-publish-panel p { margin: 0; color: #526578; font-size: 13px; }
+.review-publish-panel label { display: flex; align-items: flex-start; gap: 8px; color: #263f59; font-size: 13px; }
+.review-publish-panel input[type="checkbox"] { margin-top: 2px; }
+.source-document { margin-top: 12px; padding: 12px; border: 1px solid #e3e8ef; border-radius: 8px; background: #fcfdff; }
+.source-document-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.source-document-heading h4 { margin: 0 0 4px; }
+.source-document-heading p { margin: 0; color: #65778a; font-size: 12px; }
+.draft-lock-note { margin: 10px 0 0; color: #8a5a15; font-size: 12px; }
 .reject-form { display: grid; gap: 10px; max-width: 620px; margin-top: 13px; padding: 13px; border: 1px solid #e5c5c2; border-radius: 8px; background: #fff; }
 
 .security-note { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; padding: 10px 12px; border: 1px solid #dce2ec; border-radius: 8px; background: #f6f8fc; color: #526578; font-size: 13px; line-height: 1.5; }
 .security-note span { color: #315b85; }
 .user-password-field { display: grid; gap: 4px; }
+.llm-config-card { padding: 18px; }
+.llm-config-card .section-heading { align-items: flex-start; }
+.llm-config-card h3 { margin-bottom: 4px; }
+.llm-readonly input { background: #f6f8fc; color: #526578; }
+.llm-editor { padding-top: 14px; border-top: 1px solid #e2e7ed; }
 
 @media (max-width: 720px) {
   .admin-shell { margin-top: 24px; padding-right: 16px; padding-left: 16px; }
@@ -156,6 +181,9 @@ code { padding: 2px 5px; border-radius: 4px; background: #f0f2f5; color: #3b536a
   .panel-heading { align-items: flex-start; gap: 10px; }
   .form-actions .button { width: 100%; }
   .draft-heading { flex-direction: column; gap: 7px; }
+  .draft-group-toggle { align-items: flex-start; }
+  .draft-group-count { flex-direction: column; align-items: flex-end; gap: 3px; }
+  .source-document-heading { flex-direction: column; }
   .source-pages { text-align: left; }
   .draft-actions .button { flex: 1 1 auto; }
   .loading-state, .error-state, .empty-state { padding: 15px 12px; }

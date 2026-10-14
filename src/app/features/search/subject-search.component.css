@@ -893,12 +893,18 @@
 /* ── Group Cards Grid ── */
 .group-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  grid-template-columns: repeat(auto-fill, 322.13px);
+  justify-content: start;
   gap: 14px;
   margin-top: 8px;
 }
 
 .group-card {
+  box-sizing: border-box;
+  width: 322.13px;
+  height: 172.6px;
+  justify-self: start;
+  overflow: hidden;
   background: #fff;
   border: 2px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -910,6 +916,11 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 12px;
+}
+
+button.group-card {
+  width: 322.13px;
+  height: 172.6px;
 }
 
 .group-card:hover:not(:disabled) {
@@ -939,12 +950,17 @@
 }
 
 .group-card__headings {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
 .group-card__name {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   font-size: 1rem;
   font-weight: 700;
   color: var(--text-title);
@@ -975,6 +991,8 @@
 }
 
 .group-card__chips-box {
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -989,6 +1007,8 @@
 }
 
 .group-card__chips {
+  max-height: 68px;
+  overflow-y: auto;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -1658,6 +1678,13 @@
   .why-grid {
     grid-template-columns: 1fr;
   }
+
+  .group-card {
+    width: 322.13px;
+    height: 172.6px;
+  }
+
+  .group-grid { overflow-x: auto; }
 
   .result-card {
     padding: 22px 16px;

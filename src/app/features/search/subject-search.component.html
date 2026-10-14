@@ -306,7 +306,7 @@
               <div class="engine-step__info">
                 <h3 id="step-group-title" class="engine-step__title">Chọn Nhóm Môn Định Hướng</h3>
                 <p class="engine-step__desc">
-                  Chọn năm học để xem đúng các nhóm 4 môn trường đang tổ chức. Đây là nhóm môn học THPT, không phải tổ
+                  Chọn năm học để xem các nhóm môn trường đang tổ chức. Mỗi nhóm có thể gồm từ 1 đến 4 môn. Đây là nhóm môn học THPT, không phải tổ
                   hợp xét tuyển đại học.
                 </p>
               </div>
@@ -527,7 +527,7 @@
               <div class="recommendation-results" aria-live="polite">
                 <h3>Gợi ý cho năm học {{ result.academicYear }}</h3>
                 @if (result.recommendations.length === 0) {
-                <p>Chưa có nhóm đủ 4 môn trong dữ liệu năm học này.</p>
+                <p>Chưa có nhóm môn trong dữ liệu năm học này.</p>
                 }
                 @for (item of result.recommendations; track item.groupCode; let rank = $index) {
                 <article class="recommendation-card">

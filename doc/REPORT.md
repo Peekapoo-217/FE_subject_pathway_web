@@ -1,5 +1,26 @@
 # REPORT - FE_subject_pathway_web
 
+## Quản lý tài liệu và nhóm bản nháp THPT — 2026-10-14
+
+- [x] T1. Bỏ nút và hàm “Thêm phiên bản”; giữ form upload tài liệu riêng.
+- [x] T2. Hiển thị đúng nút theo quyền: ADMIN “Yêu cầu xóa”, SUPER_ADMIN “Xóa mềm” hoặc “Duyệt xóa”.
+- [x] T3. Gom bản nháp theo trường/năm học dạng thu gọn; khi mở nhóm tải theo cursor và chia tiếp theo tài liệu/phiên bản nguồn.
+- [x] T4. Khóa thao tác sửa/gửi/công bố trên bản nháp của tài liệu đang chờ xóa; SUPER_ADMIN có xác nhận hai bước để xóa từng nháp.
+- [x] T5. Thêm unit test cho phân nhóm/tải khi mở, contract cursor API, quyền xóa theo role và xác nhận xóa nháp. `npm test -- --watch=false --browsers=ChromeHeadless`: 50/50 test đạt; `npm run build` thành công.
+
+## OCR–ETL ảnh tài liệu THPT — 2026-10-13
+
+- [x] Form nhận PDF/PNG/JPEG/WebP, kiểm tra loại và dung lượng trước upload, mỗi lần một ảnh; nhãn và thông báo phản ánh job bất đồng bộ.
+- [x] Danh sách hiển thị lỗi trích xuất an toàn, nút thử lại job thất bại và nút làm mới; SUPER_ADMIN có thể xem và công bố bản nháp `DRAFT`.
+- [x] `npm test -- --watch=false --browsers=ChromeHeadless`: 42 test đạt; `npm run build` thành công.
+- [ ] Kiểm tra thủ công trên giao diện sau khi worker OCR văn bản được triển khai; model trích xuất không cần hỗ trợ vision.
+
+## Hiển thị lỗi OCR ảnh — 2026-10-13
+
+- [x] Hiển thị hướng dẫn riêng cho OCR rỗng, lỗi bộ OCR và quá thời gian OCR; giữ thông báo an toàn, không lộ exception nội bộ.
+- [x] Bổ sung unit test cho cả ba mã lỗi OCR.
+- [x] `npm test -- --watch=false --browsers=ChromeHeadless`: 42 test đạt; `npm run build` thành công.
+
 ## Cải thiện UI/UX trang quản trị — 2026-10-12
 
 - [x] Giữ tab ngang, làm mới giao diện responsive cho tài liệu THPT, người dùng, tổ hợp xét tuyển và cấu hình AI.
@@ -116,3 +137,27 @@ Backend cần migration V3 và snapshot từ `data-scrawler` đã nhập để c
 - [x] Kiểm tra: `npm test -- --watch=false --browsers=ChromeHeadless` (6 test đạt); `npm run build` thành công.
 
 Skill cho `data-scrawler` cũng đã được tạo và xác thực; luồng được kiểm thử trong đợt này chỉ đi qua frontend và backend. Không thay đổi logic production trong đợt kiểm thử này.
+
+## Công bố trực tiếp bởi SUPER_ADMIN — 2026-10-14
+
+- [x] Chỉ ADMIN nhìn thấy thao tác “Lưu và gửi duyệt”; SUPER_ADMIN có thể công bố trực tiếp bản nháp `DRAFT` hoặc `SUBMITTED` sau khi tải hết trang và xác nhận đã rà soát.
+- [x] Hiển thị trạng thái Neo4j cho tài liệu đã công bố, kể cả trạng thái `SYNCED` hoặc chưa có job đồng bộ.
+- [x] Cập nhật component test để kiểm tra lô trộn `DRAFT`/`SUBMITTED` có thể công bố mà không gửi duyệt.
+- [x] Kiểm tra: `npm test -- --watch=false --browsers=ChromeHeadless` (53 test đạt); `npm run build` thành công.
+
+## Rà soát và công bố nhóm môn theo trường/năm — 2026-10-14
+
+- [x] Bỏ field địa điểm trường mới khỏi form upload và FormData; địa điểm chỉ hiển thị từ metadata trường đã đăng ký.
+- [x] Nhóm môn hỗ trợ 1–4 mã môn.
+- [x] SUPER_ADMIN tải hết các trang của một nhóm trường/năm học, lưu các chỉnh sửa, xác nhận đã đọc toàn bộ rồi gửi một request công bố theo batch. Không bật nút khi còn trang hoặc nháp chưa gửi duyệt.
+- [x] Bỏ nút duyệt riêng từng nháp; hiển thị trạng thái đang đồng bộ graph sau khi PostgreSQL công bố thành công.
+- [x] Bổ sung HTTP contract test và component test cho payload không có location, batch publish, xác nhận rà soát và yêu cầu tải hết trang.
+- [x] `npm test -- --watch=false --browsers=ChromeHeadless`: 53 test đạt; `npm run build`: thành công.
+
+## Admin năm học, trường THPT và kích thước thẻ nhóm môn — 2026-10-14
+
+- [x] F1. Dùng year picker dạng lịch năm ở form upload và sửa tài liệu; giá trị gửi backend là một năm `YYYY`. Khi mở dữ liệu cũ dạng `YYYY-YYYY`, form đưa năm đầu vào picker.
+- [x] F2. Form trường mới tải danh sách trường và tỉnh qua backend, gợi ý mã theo các chữ cái đầu sau `THPT`, cho phép nhập mã khác và hiển thị thao tác dùng trường hiện hữu khi tên/tỉnh đã tồn tại.
+- [x] F3. Thẻ `button.group-card` cố định `322.13px × 172.6px`, cả desktop và mobile; mobile có thể cuộn ngang để giữ kích thước thẻ.
+- [x] F4. Thêm test cho year picker, API tỉnh/mã trường, tải lựa chọn form và thao tác chọn trường hiện có.
+- [x] Kiểm tra: `npm test -- --watch=false --browsers=ChromeHeadless --progress=false` (58 test đạt); `npm run build` thành công; `git diff --check` không có lỗi whitespace.
