@@ -57,6 +57,9 @@ export interface SubjectGroupRecommendationsResponse {
 export interface SubjectSearchRequest {
   subjectCodes: SubjectCode[];
   universityCode?: string;
+  schoolCode?: string;
+  academicYear?: string;
+  groupCode?: string;
 }
 
 /** Tổ hợp xét tuyển trả về từ Backend (thông tin rút gọn). */

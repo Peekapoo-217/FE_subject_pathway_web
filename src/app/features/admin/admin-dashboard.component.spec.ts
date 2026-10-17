@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { AdminApiService } from './admin-api.service';
@@ -16,16 +16,44 @@ describe('AdminDashboardComponent', () => {
   beforeEach(async () => {
     api = jasmine.createSpyObj<AdminApiService>('AdminApiService', [
       'documents', 'draftGroups', 'drafts', 'deleteDraft', 'deleteDocument', 'approveDocumentDelete',
+      'deletedDocuments', 'unpublishDocument', 'restoreDocument', 'documentGraphSyncStatus',
       'users', 'createUser', 'updateDocument', 'combinations', 'archiveCombination', 'retryDocumentExtraction',
-      'editDraft', 'submitDraft', 'rejectDraft', 'publishDraftGroup', 'highSchools', 'provinces', 'suggestSchoolCode'
+      'editDraft', 'submitDraft', 'rejectDraft', 'publishDraftGroup', 'highSchools', 'provinces', 'suggestSchoolCode',
+      'adminHighSchools', 'adminDeletedHighSchools', 'restoreHighSchool', 'highSchoolGraphSyncStatus',
+      'createHighSchool', 'updateHighSchool', 'deleteHighSchool'
     ]);
     api.documents.and.returnValue(throwError(() => new HttpErrorResponse({
       status: 403,
       error: { success: false, message: 'Không được phép xem tài liệu.' }
     })));
+    api.deletedDocuments.and.returnValue(of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } }));
+    api.unpublishDocument.and.returnValue(of({ success: true, data: {
+      documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'PENDING', graphSyncJobId: 'job-1'
+    } }));
+    api.restoreDocument.and.returnValue(of({ success: true, data: {
+      documentId: 'deleted-1', graphPublicationStatus: 'PUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: null
+    } }));
+    api.documentGraphSyncStatus.and.returnValue(of({ success: true, data: {
+      documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: 'job-1'
+    } }));
     api.draftGroups.and.returnValue(of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } }));
     api.drafts.and.returnValue(of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } }));
     api.users.and.returnValue(of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } }));
+    api.adminHighSchools.and.returnValue(of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } }));
+    api.adminDeletedHighSchools.and.returnValue(of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } }));
+    api.restoreHighSchool.and.returnValue(of({ success: true, data: {
+      schoolCode: 'TDT', graphSyncStatus: 'SYNCED', graphSyncJobId: null
+    } }));
+    api.highSchoolGraphSyncStatus.and.returnValue(of({ success: true, data: {
+      schoolCode: 'TDT', graphSyncStatus: 'SYNCED', graphSyncJobId: 'school-job'
+    } }));
+    api.createHighSchool.and.returnValue(of({ success: true, data: {
+      code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: ''
+    } }));
+    api.updateHighSchool.and.returnValue(of({ success: true, data: {
+      code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: ''
+    } }));
+    api.deleteHighSchool.and.returnValue(of({ success: true, data: undefined }));
     api.highSchools.and.returnValue(of({ success: true, data: [{ code: 'SCHOOL', name: 'Trường A' }] }));
     api.provinces.and.returnValue(of({ success: true, data: [{ code: '01', name: 'Thành phố Hà Nội' }] }));
     api.suggestSchoolCode.and.returnValue(of({ success: true, data: {
@@ -40,7 +68,7 @@ describe('AdminDashboardComponent', () => {
         provideHttpClient(),
         provideRouter([]),
         { provide: AdminApiService, useValue: api },
-        { provide: AuthService, useValue: { user: null, isSuperAdmin: true } }
+        { provide: AuthService, useValue: { user: null, isSuperAdmin: true, isAdmin: true } }
       ]
     }).compileComponents();
 
@@ -63,6 +91,62 @@ describe('AdminDashboardComponent', () => {
     expect(api.provinces).toHaveBeenCalled();
     expect((fixture.nativeElement as HTMLElement).querySelector('app-academic-year-picker[name="year"]'))
       .not.toBeNull();
+  });
+
+  it('shows the high-school management tab to admins and loads it on selection', async () => {
+    api.adminHighSchools.and.returnValue(of({ success: true, data: {
+      items: [{ code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: '' }],
+      hasNext: false, nextCursor: ''
+    } }));
+    fixture.detectChanges();
+    const tab = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('#tab-schools');
+
+    expect(tab).not.toBeNull();
+    tab?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(api.adminHighSchools).toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Tôn Đức Thắng');
+  });
+
+  it('shows soft-deleted schools to SUPER_ADMIN and restores the selected school', async () => {
+    api.adminDeletedHighSchools.and.returnValue(of({ success: true, data: {
+      items: [{ code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk',
+        deletedAt: '2026-10-16T00:00:00Z', graphSyncStatus: 'SYNCED', graphSyncJobId: null }],
+      hasNext: false, nextCursor: ''
+    } }));
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('#tab-schools')?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.textContent).toContain('Trường đã xóa mềm');
+    expect(root.textContent).toContain('Tôn Đức Thắng');
+    const restore = Array.from(root.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.trim() === 'Khôi phục trường');
+    restore?.click();
+    await fixture.whenStable();
+
+    expect(api.restoreHighSchool).toHaveBeenCalledWith('TDT');
+  });
+
+  it('requires a second click before soft deleting a high school', async () => {
+    api.adminHighSchools.and.returnValue(of({ success: true, data: {
+      items: [{ code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: '' }],
+      hasNext: false, nextCursor: ''
+    } }));
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('#tab-schools')?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    root.querySelector<HTMLButtonElement>('.button--danger')?.click();
+    fixture.detectChanges();
+    expect(api.deleteHighSchool).not.toHaveBeenCalled();
+
+    root.querySelector<HTMLButtonElement>('.button--danger')?.click();
+    await fixture.whenStable();
+    expect(api.deleteHighSchool).toHaveBeenCalledWith('TDT');
   });
 
   it('lets an admin reuse a matching school instead of creating a duplicate', () => {
@@ -205,6 +289,11 @@ describe('AdminDashboardComponent', () => {
       .toContain('Đọc văn bản mất quá nhiều thời gian');
   });
 
+  it('explains when a document object is missing from the active storage provider', () => {
+    expect(fixture.componentInstance.extractionError('STORAGE_OBJECT_MISSING'))
+      .toContain('Không tìm thấy tệp trong kho lưu trữ đang sử dụng');
+  });
+
   it('shows drafts under a school and academic year and loads their source document on expand', async () => {
     api.draftGroups.and.returnValue(of({ success: true, data: { items: [{ groupKey: 'S:school-a', schoolName: 'Trường A',
       schoolCode: 'school-a', location: 'Hà Nội', academicYear: '2026-2027', draftCount: 1, sourceDocumentCount: 1 }],
@@ -251,7 +340,7 @@ describe('AdminDashboardComponent', () => {
     expect(api.deleteDocument).toHaveBeenCalledWith('doc-1');
   });
 
-  it('shows a delete request action to ADMIN', async () => {
+  it('shows an approval request action to ADMIN and does not let it soft-delete directly', async () => {
     const auth = TestBed.inject(AuthService) as unknown as { user: { role: string; username: string } | null; isSuperAdmin: boolean };
     auth.user = { role: 'ADMIN', username: 'admin' };
     auth.isSuperAdmin = false;
@@ -266,11 +355,89 @@ describe('AdminDashboardComponent', () => {
     const root = fixture.nativeElement as HTMLElement;
     const request = Array.from(root.querySelectorAll<HTMLButtonElement>('button'))
       .find((button) => button.textContent?.trim() === 'Yêu cầu xóa');
-    expect(root.textContent).not.toContain('Xóa mềm');
-    if (!request) throw new Error('ADMIN delete-request action was not rendered');
+    if (!request) throw new Error('ADMIN delete request action was not rendered');
     request.click();
 
     expect(api.deleteDocument).toHaveBeenCalledWith('doc-1');
+    expect(fixture.componentInstance.message()).toContain('để SUPER_ADMIN duyệt');
+  });
+
+  it('shows the pending approval state to ADMIN without another delete action', async () => {
+    const auth = TestBed.inject(AuthService) as unknown as { user: { role: string; username: string } | null; isSuperAdmin: boolean };
+    auth.user = { role: 'ADMIN', username: 'admin' };
+    auth.isSuperAdmin = false;
+    api.documents.and.returnValue(of({ success: true, data: { items: [{ id: 'doc-1', title: 'Nhóm môn',
+      academicYear: '2026-2027', status: 'DELETE_REQUESTED', schoolName: 'Trường A', filename: 'groups.pdf', errorCode: null, graphSyncStatus: null }],
+      hasNext: false, nextCursor: '' } }));
+    fixture.componentInstance.loadDocuments();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.textContent).toContain('Chờ SUPER_ADMIN duyệt');
+    expect(Array.from(root.querySelectorAll('button')).some((button) => button.textContent?.trim() === 'Yêu cầu xóa'))
+      .toBeFalse();
+  });
+
+  it('shows restore and unpublish only in the SUPER_ADMIN deleted-document panel', async () => {
+    api.deletedDocuments.and.returnValue(of({ success: true, data: { items: [{ id: 'deleted-1', title: 'Nhóm môn',
+      academicYear: '2026', status: 'DELETED', schoolName: 'Trường A', filename: 'groups.pdf', errorCode: null,
+      graphPublicationStatus: 'PUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: null }],
+      hasNext: false, nextCursor: '' } }));
+    fixture.componentInstance.loadDeletedDocuments();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.textContent).toContain('Tài liệu đã xóa mềm');
+    expect(Array.from(root.querySelectorAll('button')).some((button) => button.textContent?.trim() === 'Ngừng công bố'))
+      .toBeTrue();
+    expect(Array.from(root.querySelectorAll('button')).some((button) => button.textContent?.trim() === 'Khôi phục'))
+      .toBeTrue();
+
+    const auth = TestBed.inject(AuthService) as unknown as { isSuperAdmin: boolean };
+    fixture.destroy();
+    api.deletedDocuments.calls.reset();
+    auth.isSuperAdmin = false;
+    fixture = TestBed.createComponent(AdminDashboardComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.deletedDocuments).not.toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).querySelector('#deleted-documents-title')).toBeNull();
+  });
+
+  it('does not report graph lifecycle completion until the worker status is SYNCED', () => {
+    jasmine.clock().install();
+    try {
+    const jobStatus = new Subject<{ success: boolean; data: {
+      documentId: string; graphPublicationStatus: 'PUBLISHED' | 'UNPUBLISHED';
+      graphSyncStatus: 'PENDING' | 'RUNNING' | 'RETRY' | 'SYNCED'; graphSyncJobId: string;
+    } }>();
+    api.documentGraphSyncStatus.and.returnValue(jobStatus.asObservable());
+    api.unpublishDocument.and.returnValue(of({ success: true, data: {
+      documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'PENDING', graphSyncJobId: 'job-1'
+    } }));
+
+    fixture.componentInstance.unpublishDeletedDocument({
+      id: 'deleted-1', title: 'Nhóm môn', academicYear: '2026', status: 'DELETED', schoolName: 'Trường A',
+      filename: 'groups.pdf', errorCode: null, graphPublicationStatus: 'PUBLISHED', graphSyncStatus: 'SYNCED'
+    });
+    jasmine.clock().tick(0);
+    expect(fixture.componentInstance.message()).toContain('Neo4j đang đồng bộ');
+
+    jobStatus.next({ success: true, data: {
+      documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'RETRY', graphSyncJobId: 'job-1'
+    } });
+    expect(fixture.componentInstance.message()).toContain('Neo4j đang đồng bộ');
+
+    jobStatus.next({ success: true, data: {
+      documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: 'job-1'
+    } });
+    expect(fixture.componentInstance.message()).toBe('Đã ngừng công bố các nhóm môn của tài liệu.');
+    } finally {
+      jasmine.clock().uninstall();
+    }
   });
 
   it('requires all pages and an explicit review confirmation before publishing the whole school-year batch', async () => {

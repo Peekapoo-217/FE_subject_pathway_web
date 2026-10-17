@@ -289,14 +289,17 @@
 
           <!-- BƯỚC 2: Chọn nhóm môn học -->
           @if (selectedSchoolCode() !== '') {
-          @if (academicYears().length > 0) {
           <label class="academic-year-control">
             <span>Năm học áp dụng</span>
-            <select [value]="selectedAcademicYear()" (change)="onAcademicYearChange($event)">
+            <select aria-label="Năm học áp dụng" [value]="selectedAcademicYear()"
+              [disabled]="isYearsLoading() || academicYears().length === 0"
+              (change)="onAcademicYearChange($event)">
+              @if (academicYears().length === 0) {
+              <option value="">{{ isYearsLoading() ? 'Đang tải năm học…' : 'Chưa có năm học để chọn' }}</option>
+              }
               @for (year of academicYears(); track year) { <option [value]="year">{{ year }}</option> }
             </select>
           </label>
-          }
           <div class="engine-step engine-step--divider" aria-labelledby="step-group-title">
             <div class="engine-step__header">
               <div class="step-badge step-badge--accent">
@@ -336,6 +339,7 @@
                 <line x1="12" y1="17" x2="12.01" y2="17"></line>
               </svg>
               <div class="engine-alert__content">{{ groupsError() }}</div>
+              <button type="button" class="engine-alert__retry-btn" (click)="retrySubjectGroups()">Thử lại</button>
             </div>
             } @else if (subjectGroups().length === 0) {
             <div class="empty-state">

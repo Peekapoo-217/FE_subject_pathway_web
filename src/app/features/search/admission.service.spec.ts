@@ -24,7 +24,11 @@ describe('AdmissionService searchBySubjects', () => {
 
   it('posts selected subject codes to the admission search endpoint', () => {
     const request = {
-      subjectCodes: ['PHYSICS', 'CHEMISTRY', 'BIOLOGY', 'INFORMATICS']
+      subjectCodes: ['PHYSICS', 'CHEMISTRY', 'BIOLOGY', 'INFORMATICS'],
+      schoolCode: 'TCV',
+      academicYear: '2026-2027',
+      groupCode: 'G01',
+      universityCode: 'DQN'
     };
     service.searchBySubjects(request).subscribe();
 
@@ -37,5 +41,14 @@ describe('AdmissionService searchBySubjects', () => {
       totalCombinations: 0, possibleCombinations: [],
       totalMajors: 0, totalUniversities: 0, universities: [], majors: []
     } });
+  });
+
+  it('sends the selected academic year when loading school groups', () => {
+    service.getSubjectGroupsBySchool('TCV', '2025-2026').subscribe();
+    const call = http.expectOne((item) => item.urlWithParams.endsWith(
+      '/api/v1/high-schools/TCV/subject-groups?academicYear=2025-2026'
+    ));
+    expect(call.request.method).toBe('GET');
+    call.flush({ success: true, data: [] });
   });
 });

@@ -1,5 +1,13 @@
 # REPORT - FE_subject_pathway_web
 
+## Chọn lại năm học khi tra cứu — 2026-10-16
+
+- [x] Giữ ô năm học hiển thị khi đã chọn trường; có trạng thái tải, trống và nút thử lại khi API lỗi.
+- [x] Đổi năm tải đúng nhóm môn, xóa kết quả cũ và bỏ qua phản hồi nhóm môn/tra cứu đến muộn từ lựa chọn trước.
+- [x] Gửi `schoolCode`, `academicYear`, `groupCode` trong cả request tổ hợp và request ngành theo đại học.
+- [x] `npm.cmd test -- --watch=false --browsers=ChromeHeadless --include=src/app/features/search/*.spec.ts`: 8/8 đạt. Chrome bị chặn trong sandbox; chạy lại ngoài sandbox thành công.
+- [x] `npm.cmd run build`: thành công. Kiểm thử tương tác bằng DOM trong ChromeHeadless; chưa kiểm tra thủ công trình duyệt.
+
 ## Quản lý tài liệu và nhóm bản nháp THPT — 2026-10-14
 
 - [x] T1. Bỏ nút và hàm “Thêm phiên bản”; giữ form upload tài liệu riêng.
@@ -161,3 +169,27 @@ Skill cho `data-scrawler` cũng đã được tạo và xác thực; luồng đ�
 - [x] F3. Thẻ `button.group-card` cố định `322.13px × 172.6px`, cả desktop và mobile; mobile có thể cuộn ngang để giữ kích thước thẻ.
 - [x] F4. Thêm test cho year picker, API tỉnh/mã trường, tải lựa chọn form và thao tác chọn trường hiện có.
 - [x] Kiểm tra: `npm test -- --watch=false --browsers=ChromeHeadless --progress=false` (58 test đạt); `npm run build` thành công; `git diff --check` không có lỗi whitespace.
+
+## Quản trị trường THPT và bỏ cấu hình AI — 2026-10-16
+
+- [x] Gỡ tab cấu hình AI và các request AI-config khỏi giao diện quản trị.
+- [x] Thêm tab quản lý trường THPT cho ADMIN/SUPER_ADMIN: tạo, sửa tên/tỉnh/mã, gợi ý mã theo tên, xóa mềm có bước xác nhận.
+- [x] Nạp danh sách theo keyset cursor; sau khi thêm/sửa/xóa, làm mới danh sách trường dùng cho upload tài liệu và nhóm bản nháp.
+- [x] Thêm HTTP contract tests cho cursor và CRUD, component tests cho quyền hiển thị tab, tải danh sách và xác nhận xóa.
+- [x] Kiểm tra: `npm test -- --watch=false --browsers=ChromeHeadless --progress=false` (62 test đạt); `npm run build` thành công.
+
+## MinIO document storage error feedback - 2026-10-16
+
+- [x] Explain `STORAGE_OBJECT_MISSING` in the admin extraction status so operators can identify files absent from the currently selected provider.
+- [x] Verification: `npm test -- --watch=false --browsers=ChromeHeadless --progress=false` passed 63 tests; `npm run build` succeeded.
+# Khôi phục trường THPT đã xóa mềm — 2026-10-16
+
+- [x] Thêm API client và màn hình SUPER_ADMIN để xem trường đã xóa mềm, khôi phục trường và theo dõi trạng thái đồng bộ graph.
+- [x] Giữ tài liệu liên quan trong danh sách đã xóa để SUPER_ADMIN khôi phục riêng sau khi khôi phục trường.
+- [x] Kiểm thử: `npm.cmd test -- --watch=false --browsers=ChromeHeadless` (72/72 đạt); `npm.cmd run build` thành công.
+
+## Luồng yêu cầu xóa tài liệu theo role — 2026-10-17
+
+- [x] ADMIN thấy nút “Yêu cầu xóa”; sau khi gửi, danh sách thể hiện trạng thái chờ SUPER_ADMIN duyệt và ẩn thao tác gửi lặp.
+- [x] SUPER_ADMIN thấy thao tác “Xóa mềm” trực tiếp. Tài liệu đã xóa hoặc chờ duyệt không còn thao tác xóa trên danh sách tài liệu đang hoạt động.
+- [x] Kiểm thử component: 22/22 đạt; `npm.cmd run build` thành công.

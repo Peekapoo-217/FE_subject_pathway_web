@@ -29,6 +29,31 @@ describe('AdminApiService document workflow', () => {
     request.flush({ success: true, data: null });
   });
 
+  it('uses dedicated routes for deleted document review and lifecycle actions', () => {
+    api.deletedDocuments('deleted-cursor').subscribe();
+    const list = http.expectOne((candidate) => candidate.url === `${base}/deleted`
+      && candidate.params.get('cursor') === 'deleted-cursor');
+    expect(list.request.method).toBe('GET');
+    list.flush({ success: true, data: { items: [], hasNext: false, nextCursor: '' } });
+
+    api.unpublishDocument('doc-1').subscribe();
+    const unpublish = http.expectOne(`${base}/doc-1/unpublish`);
+    expect(unpublish.request.method).toBe('POST');
+    unpublish.flush({ success: true, data: { documentId: 'doc-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'PENDING', graphSyncJobId: 'job-1' } });
+
+    api.restoreDocument('doc-1').subscribe();
+    const restore = http.expectOne(`${base}/doc-1/restore`);
+    expect(restore.request.method).toBe('POST');
+    restore.flush({ success: true, data: { documentId: 'doc-1', graphPublicationStatus: 'PUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: null } });
+
+    api.documentGraphSyncStatus('doc-1', 'job-1').subscribe();
+    const graphStatus = http.expectOne(`${base}/doc-1/graph-sync/job-1`);
+    expect(graphStatus.request.method).toBe('GET');
+    graphStatus.flush({ success: true, data: {
+      documentId: 'doc-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: 'job-1'
+    } });
+  });
+
   it('loads school/year summaries through the dedicated cursor endpoint', () => {
     api.draftGroups('next-groups').subscribe();
 
@@ -102,5 +127,56 @@ describe('AdminApiService document workflow', () => {
       suggestedCode: 'TĐT', available: true, canReuseExistingSchool: false,
       existingSchoolCode: null, existingSchoolName: null, existingSchoolLocation: null
     } });
+  });
+
+  it('uses cursor pagination for the managed high-school list', () => {
+    api.adminHighSchools('next-school').subscribe();
+
+    const request = http.expectOne((candidate) => candidate.url === `${environment.API_URL}/api/v1/admin/high-schools`
+      && candidate.params.get('size') === '20' && candidate.params.get('cursor') === 'next-school');
+    expect(request.request.method).toBe('GET');
+    request.flush({ success: true, data: { items: [], hasNext: false, nextCursor: '' } });
+  });
+
+  it('lists deleted schools and restores one through the SUPER_ADMIN API', () => {
+    api.adminDeletedHighSchools('next-deleted').subscribe();
+    const list = http.expectOne((candidate) => candidate.url === `${environment.API_URL}/api/v1/admin/high-schools/deleted`
+      && candidate.params.get('size') === '20' && candidate.params.get('cursor') === 'next-deleted');
+    expect(list.request.method).toBe('GET');
+    list.flush({ success: true, data: { items: [], hasNext: false, nextCursor: '' } });
+
+    api.restoreHighSchool('TĐT').subscribe();
+    const restore = http.expectOne(`${environment.API_URL}/api/v1/admin/high-schools/T%C4%90T/restore`);
+    expect(restore.request.method).toBe('POST');
+    restore.flush({ success: true, data: {
+      schoolCode: 'TĐT', graphSyncStatus: 'PENDING', graphSyncJobId: 'school-job'
+    } });
+
+    api.highSchoolGraphSyncStatus('TĐT', 'school-job').subscribe();
+    const status = http.expectOne(`${environment.API_URL}/api/v1/admin/high-schools/T%C4%90T/graph-sync/school-job`);
+    expect(status.request.method).toBe('GET');
+    status.flush({ success: true, data: {
+      schoolCode: 'TĐT', graphSyncStatus: 'SYNCED', graphSyncJobId: 'school-job'
+    } });
+  });
+
+  it('creates, updates and soft deletes a high school through the admin API', () => {
+    const school = { name: 'Trường THPT Tôn Đức Thắng', provinceCode: '66', code: 'TĐT' };
+    api.createHighSchool(school).subscribe();
+    const create = http.expectOne(`${environment.API_URL}/api/v1/admin/high-schools`);
+    expect(create.request.method).toBe('POST');
+    expect(create.request.body).toEqual(school);
+    create.flush({ success: true, data: { ...school, location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: '' } });
+
+    api.updateHighSchool('OLD', school).subscribe();
+    const update = http.expectOne(`${environment.API_URL}/api/v1/admin/high-schools/OLD`);
+    expect(update.request.method).toBe('PUT');
+    expect(update.request.body).toEqual(school);
+    update.flush({ success: true, data: { ...school, location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: '' } });
+
+    api.deleteHighSchool('TĐT').subscribe();
+    const remove = http.expectOne(`${environment.API_URL}/api/v1/admin/high-schools/T%C4%90T`);
+    expect(remove.request.method).toBe('DELETE');
+    remove.flush({ success: true, data: null });
   });
 });

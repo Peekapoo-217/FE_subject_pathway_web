@@ -72,6 +72,8 @@ export class SubjectSearchComponent implements OnInit {
   protected readonly selectedSchoolCode = signal<string>('');
   protected readonly academicYears = signal<readonly string[]>([]);
   protected readonly selectedAcademicYear = signal('');
+  protected readonly isYearsLoading = signal(false);
+  private groupsRequestId = 0;
 
   /** Bước 2 — nhóm môn của trường đang chọn. */
   protected readonly subjectGroups = signal<readonly SubjectGroupDto[]>([]);
@@ -284,29 +286,48 @@ export class SubjectSearchComponent implements OnInit {
 
   /** Bước 2: tải nhóm môn học theo mã trường THPT đã chọn. */
   private async loadSubjectGroups(schoolCode: string): Promise<void> {
+    const requestId = ++this.groupsRequestId;
     this.isGroupsLoading.set(true);
+    this.isYearsLoading.set(true);
     this.groupsError.set(null);
 
     try {
       const yearsResponse = await firstValueFrom(this.admissionService.getAcademicYears(schoolCode));
+      if (requestId !== this.groupsRequestId) return;
       const years = yearsResponse?.data ?? [];
       this.academicYears.set(years);
-      const selectedYear = years[0] ?? '';
+      const selectedYear = years.includes(this.selectedAcademicYear())
+        ? this.selectedAcademicYear() : years[0] ?? '';
       this.selectedAcademicYear.set(selectedYear);
-      const response = selectedYear
-        ? await firstValueFrom(this.admissionService.getSubjectGroupsBySchool(schoolCode, selectedYear))
-        : await firstValueFrom(this.admissionService.getSubjectGroupsBySchool(schoolCode));
-      this.subjectGroups.set(response?.data ?? []);
+      this.isYearsLoading.set(false);
+      if (!selectedYear) {
+        this.subjectGroups.set([]);
+        return;
+      }
+      const response = await firstValueFrom(this.admissionService.getSubjectGroupsBySchool(schoolCode, selectedYear));
+      if (requestId === this.groupsRequestId) this.subjectGroups.set(response?.data ?? []);
     } catch (error) {
-      this.subjectGroups.set([]);
-      this.groupsError.set(this.admissionService.extractErrorMessage(error));
+      if (requestId === this.groupsRequestId) {
+        this.subjectGroups.set([]);
+        this.groupsError.set(this.admissionService.extractErrorMessage(error));
+      }
     } finally {
-      this.isGroupsLoading.set(false);
+      if (requestId === this.groupsRequestId) {
+        this.isGroupsLoading.set(false);
+        this.isYearsLoading.set(false);
+      }
     }
+  }
+
+  protected retrySubjectGroups(): void {
+    const schoolCode = this.selectedSchoolCode();
+    if (schoolCode) void this.loadSubjectGroups(schoolCode);
   }
 
   /** Bước 2: đổi trường → tải nhóm môn của trường đó, reset kết quả cũ. */
   protected onSchoolChange(event: Event): void {
+    this.groupsRequestId++;
+    this.isYearsLoading.set(false);
     const selectElement = event.target as HTMLSelectElement;
     const schoolCode = selectElement.value;
     this.selectedSchoolCode.set(schoolCode);
@@ -340,8 +361,13 @@ export class SubjectSearchComponent implements OnInit {
 
   protected async onAcademicYearChange(event: Event): Promise<void> {
     const year = (event.target as HTMLSelectElement).value;
+    if (!this.academicYears().includes(year)) return;
+    const requestId = ++this.groupsRequestId;
     this.selectedAcademicYear.set(year);
     const schoolCode = this.selectedSchoolCode();
+    this.subjectGroups.set([]);
+    this.groupsError.set(null);
+    this.groupFilter.set('');
     this.selectedGroup.set(null);
     this.searchResult.set(null);
     this.searchError.set(null);
@@ -355,12 +381,14 @@ export class SubjectSearchComponent implements OnInit {
     this.isGroupsLoading.set(true);
     try {
       const response = await firstValueFrom(this.admissionService.getSubjectGroupsBySchool(schoolCode, year));
-      this.subjectGroups.set(response.data ?? []);
+      if (requestId === this.groupsRequestId) this.subjectGroups.set(response.data ?? []);
     } catch (error: unknown) {
-      this.subjectGroups.set([]);
-      this.groupsError.set(this.admissionService.extractErrorMessage(error));
+      if (requestId === this.groupsRequestId) {
+        this.subjectGroups.set([]);
+        this.groupsError.set(this.admissionService.extractErrorMessage(error));
+      }
     } finally {
-      this.isGroupsLoading.set(false);
+      if (requestId === this.groupsRequestId) this.isGroupsLoading.set(false);
     }
   }
 
@@ -451,7 +479,10 @@ export class SubjectSearchComponent implements OnInit {
     this.searchError.set(null);
     try {
       const response = await firstValueFrom(this.admissionService.searchBySubjects({
-        subjectCodes: group.subjects.map((subject) => subject.code)
+        subjectCodes: group.subjects.map((subject) => subject.code),
+        schoolCode: this.selectedSchoolCode(),
+        academicYear: this.selectedAcademicYear(),
+        groupCode: group.groupCode
       }));
       if (requestId === this.searchRequestId) {
         this.searchResult.set({
@@ -475,6 +506,9 @@ export class SubjectSearchComponent implements OnInit {
     try {
       const response = await firstValueFrom(this.admissionService.searchBySubjects({
         subjectCodes: group.subjects.map((subject) => subject.code),
+        schoolCode: this.selectedSchoolCode(),
+        academicYear: this.selectedAcademicYear(),
+        groupCode: group.groupCode,
         universityCode
       }));
       if (requestId === this.searchRequestId) {

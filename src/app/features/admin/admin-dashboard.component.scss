@@ -149,14 +149,8 @@ code { padding: 2px 5px; border-radius: 4px; background: #f0f2f5; color: #3b536a
 .draft-lock-note { margin: 10px 0 0; color: #8a5a15; font-size: 12px; }
 .reject-form { display: grid; gap: 10px; max-width: 620px; margin-top: 13px; padding: 13px; border: 1px solid #e5c5c2; border-radius: 8px; background: #fff; }
 
-.security-note { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; padding: 10px 12px; border: 1px solid #dce2ec; border-radius: 8px; background: #f6f8fc; color: #526578; font-size: 13px; line-height: 1.5; }
-.security-note span { color: #315b85; }
 .user-password-field { display: grid; gap: 4px; }
-.llm-config-card { padding: 18px; }
-.llm-config-card .section-heading { align-items: flex-start; }
-.llm-config-card h3 { margin-bottom: 4px; }
-.llm-readonly input { background: #f6f8fc; color: #526578; }
-.llm-editor { padding-top: 14px; border-top: 1px solid #e2e7ed; }
+.school-management-form { align-items: end; }
 
 @media (max-width: 720px) {
   .admin-shell { margin-top: 24px; padding-right: 16px; padding-left: 16px; }

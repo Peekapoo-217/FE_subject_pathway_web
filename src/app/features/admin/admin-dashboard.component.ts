@@ -2,25 +2,26 @@ import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
-import { finalize, forkJoin, switchMap } from 'rxjs';
+import { exhaustMap, finalize, forkJoin, Subscription, switchMap, takeWhile, timer } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { getErrorMessage } from '../../core/http/error-message';
 import { AcademicYearPickerComponent } from './academic-year-picker.component';
 import {
   AdminApiService,
-  AdminDraftGroup,
   AdminCombination,
+  AdminDeletedHighSchool,
   AdminDocument,
+  AdminDraftGroup,
+  AdminHighSchool,
   AdminUser,
   HighSchoolOption,
-  LlmConfiguration,
   Province,
   SchoolCodeSuggestion,
   SubjectGroupDraft
 } from './admin-api.service';
 
-type AdminTab = 'documents' | 'users' | 'combinations' | 'llm';
+type AdminTab = 'documents' | 'schools' | 'users' | 'combinations';
 
 interface DraftGroupState extends AdminDraftGroup {
   expanded: boolean;
@@ -59,10 +60,12 @@ export class AdminDashboardComponent implements OnInit {
   readonly uploadAttempted = signal(false);
   readonly fileError = signal('');
   readonly documents = signal<AdminDocument[]>([]);
+  readonly deletedDocuments = signal<AdminDocument[]>([]);
   readonly draftGroups = signal<DraftGroupState[]>([]);
   readonly users = signal<AdminUser[]>([]);
   readonly combinations = signal<AdminCombination[]>([]);
-  readonly llmConfigurations = signal<LlmConfiguration[]>([]);
+  readonly managedSchools = signal<AdminHighSchool[]>([]);
+  readonly deletedManagedSchools = signal<AdminDeletedHighSchool[]>([]);
   readonly schools = signal<HighSchoolOption[]>([]);
   readonly provinces = signal<Province[]>([]);
   readonly schoolCodeSuggestion = signal<SchoolCodeSuggestion | null>(null);
@@ -72,29 +75,39 @@ export class AdminDashboardComponent implements OnInit {
   readonly schoolsError = signal('');
   readonly schoolCodeSuggestionError = signal('');
   readonly editSchoolCodeSuggestionError = signal('');
-  readonly editingLlmPurpose = signal<LlmConfiguration['purpose'] | null>(null);
 
   readonly loadingDocuments = signal(false);
+  readonly loadingDeletedDocuments = signal(false);
   readonly loadingDraftGroups = signal(false);
   readonly loadingUsers = signal(false);
   readonly loadingCombinations = signal(false);
-  readonly loadingLlm = signal(false);
+  readonly loadingManagedSchools = signal(false);
+  readonly loadingDeletedManagedSchools = signal(false);
   readonly documentsError = signal('');
+  readonly deletedDocumentsError = signal('');
   readonly draftGroupsError = signal('');
   readonly usersError = signal('');
   readonly combinationsError = signal('');
-  readonly llmError = signal('');
+  readonly managedSchoolsError = signal('');
+  readonly deletedManagedSchoolsError = signal('');
 
   readonly documentsHasNext = signal(false);
   readonly draftGroupsHasNext = signal(false);
   readonly usersHasNext = signal(false);
   readonly combinationsHasNext = signal(false);
+  readonly managedSchoolsHasNext = signal(false);
+  readonly deletedManagedSchoolsHasNext = signal(false);
   readonly documentsCursor = signal('');
+  readonly deletedDocumentsCursor = signal('');
+  readonly deletedDocumentsHasNext = signal(false);
   readonly draftGroupsCursor = signal('');
   readonly usersCursor = signal('');
   readonly combinationsCursor = signal('');
+  readonly managedSchoolsCursor = signal('');
+  readonly deletedManagedSchoolsCursor = signal('');
   readonly archiveConfirmationId = signal('');
   readonly draftDeleteConfirmationId = signal('');
+  readonly deleteSchoolConfirmationCode = signal('');
 
   tab: AdminTab = 'documents';
   file: File | null = null;
@@ -118,11 +131,15 @@ export class AdminDashboardComponent implements OnInit {
   newRole: AdminUser['role'] = 'USER';
   combinationDisplay = '';
   combinationSubjects = '';
-  llmPurpose = 'EXTRACTION';
-  llmEndpoint = '';
-  llmModel = '';
-  llmKey = '';
-  llmActive = true;
+  managedSchoolCode = '';
+  managedSchoolName = '';
+  managedSchoolProvinceCode = '';
+  editingManagedSchoolCode = '';
+  private lastSuggestedManagedSchoolCode = '';
+  private readonly graphSyncPolls = new Map<string, Subscription>();
+  private readonly pendingGraphSyncMessages = new Map<string, string>();
+  private readonly schoolGraphSyncPolls = new Map<string, Subscription>();
+  private readonly pendingSchoolGraphSyncMessages = new Map<string, string>();
 
   editingDocument: AdminDocument | null = null;
   editTitle = '';
@@ -132,15 +149,19 @@ export class AdminDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadDocuments();
+    if (this.auth.isSuperAdmin) this.loadDeletedDocuments();
     this.loadDraftGroups();
     this.loadSchoolOptions();
   }
 
   selectTab(tab: AdminTab): void {
     this.tab = tab;
+    if (tab === 'schools') {
+      this.loadManagedSchools();
+      if (this.auth.isSuperAdmin) this.loadDeletedManagedSchools();
+    }
     if (tab === 'users') this.loadUsers();
     if (tab === 'combinations') this.loadCombinations();
-    if (tab === 'llm') this.loadLlm();
   }
 
   onFile(event: Event): void {
@@ -201,9 +222,121 @@ export class AdminDashboardComponent implements OnInit {
         this.documents.set(cursor ? [...this.documents(), ...data.items] : data.items);
         this.documentsHasNext.set(data.hasNext);
         this.documentsCursor.set(data.nextCursor);
+        this.resumePendingGraphSync(data.items);
       },
       error: (error: unknown) => this.documentsError.set(getErrorMessage(error, 'Không tải được danh sách tài liệu.'))
     });
+  }
+
+  loadDeletedDocuments(cursor?: string): void {
+    if (!this.auth.isSuperAdmin) return;
+    this.loadingDeletedDocuments.set(true);
+    this.deletedDocumentsError.set('');
+    this.api.deletedDocuments(cursor).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.loadingDeletedDocuments.set(false))
+    ).subscribe({
+      next: ({ data }) => {
+        this.deletedDocuments.set(cursor ? [...this.deletedDocuments(), ...data.items] : data.items);
+        this.deletedDocumentsHasNext.set(data.hasNext);
+        this.deletedDocumentsCursor.set(data.nextCursor);
+        this.resumePendingGraphSync(data.items);
+      },
+      error: (error: unknown) => this.deletedDocumentsError.set(getErrorMessage(error, 'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch tÃ i liá»‡u Ä‘Ã£ xÃ³a.'))
+    });
+  }
+
+  isGraphSyncPending(document: AdminDocument): boolean {
+    return document.graphSyncStatus === 'PENDING' || document.graphSyncStatus === 'RUNNING'
+      || document.graphSyncStatus === 'RETRY';
+  }
+
+  unpublishDeletedDocument(document: AdminDocument): void {
+    this.busy.set(true);
+    this.api.unpublishDocument(document.id).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.busy.set(false))
+    ).subscribe({
+      next: ({ data }) => {
+        this.messageIsError.set(false);
+        this.message.set(data.graphSyncStatus === 'SYNCED'
+          ? 'Đã ngừng công bố các nhóm môn của tài liệu.'
+          : 'Đã ghi nhận yêu cầu. Neo4j đang đồng bộ; theo dõi log terminal của worker.');
+        this.loadDeletedDocuments();
+        if (data.graphSyncJobId && data.graphSyncStatus !== 'SYNCED') {
+          this.startGraphSyncPolling(data.documentId, data.graphSyncJobId, 'Đã ngừng công bố các nhóm môn của tài liệu.');
+        }
+      },
+      error: (error: unknown) => this.setError(error, 'Không thể ngừng công bố tài liệu.')
+    });
+  }
+
+  restoreDeletedDocument(document: AdminDocument): void {
+    this.busy.set(true);
+    this.api.restoreDocument(document.id).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.busy.set(false))
+    ).subscribe({
+      next: ({ data }) => {
+        this.messageIsError.set(false);
+        this.message.set(data.graphSyncStatus === 'SYNCED'
+          ? 'Đã khôi phục tài liệu và công bố lại các nhóm môn.'
+          : 'Đã khôi phục PostgreSQL/MinIO. Neo4j đang đồng bộ; theo dõi log terminal của worker.');
+        this.loadDocuments();
+        this.loadDeletedDocuments();
+        this.loadDraftGroups();
+        if (data.graphSyncJobId && data.graphSyncStatus !== 'SYNCED') {
+          this.startGraphSyncPolling(data.documentId, data.graphSyncJobId, 'Đã khôi phục tài liệu và công bố lại các nhóm môn.');
+        }
+      },
+      error: (error: unknown) => this.setError(error, 'Không thể khôi phục tài liệu.')
+    });
+  }
+
+  private resumePendingGraphSync(documents: AdminDocument[]): void {
+    if (this.busy()) return;
+    documents.filter((document) => this.isGraphSyncPending(document) && document.graphSyncJobId
+      && !this.graphSyncPolls.has(document.graphSyncJobId))
+      .forEach((document) => this.startGraphSyncPolling(document.id, document.graphSyncJobId!));
+  }
+
+  private startGraphSyncPolling(documentId: string, jobId: string, completedMessage?: string): void {
+    if (completedMessage) this.pendingGraphSyncMessages.set(jobId, completedMessage);
+    if (this.graphSyncPolls.has(jobId)) return;
+    const poll = timer(0, 2500).pipe(
+      exhaustMap(() => this.api.documentGraphSyncStatus(documentId, jobId)),
+      takeWhile(({ data }) => data.graphSyncStatus !== 'SYNCED', true),
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.graphSyncPolls.delete(jobId))
+    ).subscribe({
+      next: ({ data }) => {
+        const update = (items: AdminDocument[]) => items.map((document) => document.id === documentId
+          ? {
+            ...document, graphPublicationStatus: data.graphPublicationStatus,
+            graphSyncStatus: data.graphSyncStatus, graphSyncJobId: data.graphSyncJobId
+          } : document);
+        this.documents.update(update);
+        this.deletedDocuments.update(update);
+        if (data.graphSyncStatus === 'SYNCED') {
+          const successMessage = this.pendingGraphSyncMessages.get(jobId);
+          if (successMessage) {
+            this.messageIsError.set(false);
+            this.message.set(successMessage);
+          }
+          this.pendingGraphSyncMessages.delete(jobId);
+          this.loadDocuments();
+          if (this.auth.isSuperAdmin) this.loadDeletedDocuments();
+          this.loadDraftGroups();
+        }
+      },
+      error: () => {
+        if (this.pendingGraphSyncMessages.has(jobId)) {
+          this.messageIsError.set(true);
+          this.message.set('Chưa xác nhận được trạng thái Neo4j; worker vẫn có thể thử lại. Xem log terminal rồi làm mới danh sách.');
+        }
+      }
+    });
+    this.graphSyncPolls.set(jobId, poll);
   }
 
   loadDraftGroups(cursor?: string): void {
@@ -215,8 +348,8 @@ export class AdminDashboardComponent implements OnInit {
     ).subscribe({
       next: ({ data }) => {
         const groups = data.items.map((group): DraftGroupState => ({
-        ...group, expanded: false, loaded: false, loading: false, error: '', drafts: [], sources: [],
-        hasNext: false, cursor: '', reviewConfirmed: false
+          ...group, expanded: false, loaded: false, loading: false, error: '', drafts: [], sources: [],
+          hasNext: false, cursor: '', reviewConfirmed: false
         }));
         this.draftGroups.set(cursor ? [...this.draftGroups(), ...groups] : groups);
         this.draftGroupsHasNext.set(data.hasNext);
@@ -301,13 +434,15 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   private updateDraftGroup(group: Pick<AdminDraftGroup, 'groupKey' | 'academicYear'>,
-      update: (current: DraftGroupState) => DraftGroupState): void {
+    update: (current: DraftGroupState) => DraftGroupState): void {
     this.draftGroups.update((groups) => groups.map((item) =>
       item.groupKey === group.groupKey && item.academicYear === group.academicYear ? update(item) : item));
   }
 
   requestDelete(document: AdminDocument): void {
-    const message = this.auth.isSuperAdmin ? 'Đã xóa mềm tài liệu và các bản nháp chưa công bố.' : 'Đã gửi yêu cầu xóa tài liệu.';
+    const message = this.auth.isSuperAdmin
+      ? 'Đã xóa mềm tài liệu. Các nhóm môn vẫn được công bố.'
+      : 'Đã gửi yêu cầu xóa tài liệu để SUPER_ADMIN duyệt.';
     this.run(this.api.deleteDocument(document.id), message, () => {
       this.loadDocuments();
       this.loadDraftGroups();
@@ -514,6 +649,7 @@ export class AdminDashboardComponent implements OnInit {
       IMAGE_INVALID: 'Ảnh không đọc được.',
       IMAGE_PIXEL_LIMIT: 'Ảnh vượt giới hạn 20 megapixel.',
       IMAGE_LIMIT: 'Ảnh vượt giới hạn 10 MB.',
+      STORAGE_OBJECT_MISSING: 'Không tìm thấy tệp trong kho lưu trữ đang sử dụng. Tệp có thể vẫn nằm trong kho lưu trữ đã dùng trước đó.',
       INVALID_LLM_SCHEMA: 'Model trả về dữ liệu không hợp lệ.'
     };
     return labels[code ?? ''] ?? 'Trích xuất thất bại. Kiểm tra tài liệu hoặc cấu hình AI rồi thử lại.';
@@ -682,50 +818,182 @@ export class AdminDashboardComponent implements OnInit {
     this.archiveConfirmationId.set('');
   }
 
-  loadLlm(): void {
-    this.loadingLlm.set(true);
-    this.llmError.set('');
-    this.api.llmConfigurations().pipe(
+  loadManagedSchools(cursor?: string): void {
+    this.loadingManagedSchools.set(true);
+    this.managedSchoolsError.set('');
+    this.api.adminHighSchools(cursor).pipe(
       takeUntilDestroyed(this.destroyRef),
-      finalize(() => this.loadingLlm.set(false))
+      finalize(() => this.loadingManagedSchools.set(false))
     ).subscribe({
-      next: ({ data }) => this.llmConfigurations.set(data),
-      error: (error: unknown) => this.llmError.set(getErrorMessage(error, 'Không tải được cấu hình AI.'))
+      next: ({ data }) => {
+        this.managedSchools.set(cursor ? [...this.managedSchools(), ...data.items] : data.items);
+        this.managedSchoolsHasNext.set(data.hasNext);
+        this.managedSchoolsCursor.set(data.nextCursor);
+        if (this.auth.isSuperAdmin) this.resumePendingSchoolGraphSync(data.items);
+      },
+      error: (error: unknown) => this.managedSchoolsError.set(getErrorMessage(error, 'Không tải được danh sách trường THPT.'))
     });
   }
 
-  configureLlm(item: LlmConfiguration): void {
-    this.llmPurpose = item.purpose;
-    this.llmEndpoint = item.endpoint;
-    this.llmModel = item.model;
-    this.llmKey = '';
-    this.llmActive = item.active;
-    this.editingLlmPurpose.set(item.purpose);
+  loadDeletedManagedSchools(cursor?: string): void {
+    if (!this.auth.isSuperAdmin) return;
+    this.loadingDeletedManagedSchools.set(true);
+    this.deletedManagedSchoolsError.set('');
+    this.api.adminDeletedHighSchools(cursor).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.loadingDeletedManagedSchools.set(false))
+    ).subscribe({
+      next: ({ data }) => {
+        this.deletedManagedSchools.set(cursor ? [...this.deletedManagedSchools(), ...data.items] : data.items);
+        this.deletedManagedSchoolsHasNext.set(data.hasNext);
+        this.deletedManagedSchoolsCursor.set(data.nextCursor);
+        this.resumePendingSchoolGraphSync(data.items);
+      },
+      error: (error: unknown) => this.deletedManagedSchoolsError.set(
+        getErrorMessage(error, 'Không tải được danh sách trường đã xóa mềm.'))
+    });
   }
 
-  cancelLlmConfiguration(): void {
-    this.editingLlmPurpose.set(null);
-    this.llmKey = '';
+  isSchoolGraphSyncPending(school: Pick<AdminHighSchool, 'graphSyncStatus'>): boolean {
+    return school.graphSyncStatus === 'PENDING' || school.graphSyncStatus === 'RUNNING'
+      || school.graphSyncStatus === 'RETRY';
   }
 
-  saveLlm(form: NgForm): void {
+  restoreManagedSchool(school: AdminDeletedHighSchool): void {
+    if (!this.auth.isSuperAdmin) return;
+    this.busy.set(true);
+    this.api.restoreHighSchool(school.code).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.busy.set(false))
+    ).subscribe({
+      next: ({ data }) => {
+        this.messageIsError.set(false);
+        this.message.set(data.graphSyncStatus === 'SYNCED'
+          ? 'Đã khôi phục trường và nhóm môn. Tài liệu liên quan vẫn cần khôi phục riêng.'
+          : 'Đã khôi phục trường và nhóm môn; graph đang đồng bộ. Tài liệu liên quan vẫn cần khôi phục riêng.');
+        this.loadManagedSchools();
+        this.loadDeletedManagedSchools();
+        this.loadSchoolOptions();
+        if (data.graphSyncJobId && data.graphSyncStatus !== 'SYNCED') {
+          this.startSchoolGraphSyncPolling(data.schoolCode, data.graphSyncJobId,
+            'Đã khôi phục trường và nhóm môn. Tài liệu liên quan vẫn cần khôi phục riêng.');
+        }
+      },
+      error: (error: unknown) => this.setError(error, 'Không khôi phục được trường THPT.')
+    });
+  }
+
+  private resumePendingSchoolGraphSync(schools: Array<AdminHighSchool | AdminDeletedHighSchool>): void {
+    schools.filter((school) => this.isSchoolGraphSyncPending(school) && school.graphSyncJobId
+      && !this.schoolGraphSyncPolls.has(school.graphSyncJobId))
+      .forEach((school) => this.startSchoolGraphSyncPolling(school.code, school.graphSyncJobId!));
+  }
+
+  private startSchoolGraphSyncPolling(code: string, jobId: string, completedMessage?: string): void {
+    if (completedMessage) this.pendingSchoolGraphSyncMessages.set(jobId, completedMessage);
+    if (this.schoolGraphSyncPolls.has(jobId)) return;
+    const poll = timer(0, 2500).pipe(
+      exhaustMap(() => this.api.highSchoolGraphSyncStatus(code, jobId)),
+      takeWhile(({ data }) => data.graphSyncStatus !== 'SYNCED', true),
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.schoolGraphSyncPolls.delete(jobId))
+    ).subscribe({
+      next: ({ data }) => {
+        const update = (school: AdminHighSchool): AdminHighSchool => school.code === code
+          ? { ...school, graphSyncStatus: data.graphSyncStatus, graphSyncJobId: data.graphSyncJobId } : school;
+        this.managedSchools.update((schools) => schools.map(update));
+        this.deletedManagedSchools.update((schools) => schools.map((school) => school.code === code
+          ? { ...school, graphSyncStatus: data.graphSyncStatus, graphSyncJobId: data.graphSyncJobId } : school));
+        if (data.graphSyncStatus === 'SYNCED') {
+          const successMessage = this.pendingSchoolGraphSyncMessages.get(jobId);
+          if (successMessage) {
+            this.messageIsError.set(false);
+            this.message.set(successMessage);
+          }
+          this.pendingSchoolGraphSyncMessages.delete(jobId);
+          this.loadManagedSchools();
+          this.loadDeletedManagedSchools();
+        }
+      },
+      error: () => {
+        if (this.pendingSchoolGraphSyncMessages.has(jobId)) {
+          this.messageIsError.set(true);
+          this.message.set('Chưa xác nhận được trạng thái Neo4j; worker có thể tiếp tục thử lại. Hãy xem log terminal rồi làm mới danh sách.');
+        }
+      }
+    });
+    this.schoolGraphSyncPolls.set(jobId, poll);
+  }
+
+  onManagedSchoolNameChanged(): void {
+    if (this.editingManagedSchoolCode || !this.managedSchoolName.trim() || !this.managedSchoolProvinceCode) return;
+    this.api.suggestSchoolCode(this.managedSchoolName.trim(), this.managedSchoolProvinceCode).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: ({ data }) => {
+        if (!this.managedSchoolCode || this.managedSchoolCode === this.lastSuggestedManagedSchoolCode) {
+          this.managedSchoolCode = data.suggestedCode;
+        }
+        this.lastSuggestedManagedSchoolCode = data.suggestedCode;
+      },
+      error: () => { this.lastSuggestedManagedSchoolCode = ''; }
+    });
+  }
+
+  editManagedSchool(school: AdminHighSchool): void {
+    this.editingManagedSchoolCode = school.code;
+    this.managedSchoolCode = school.code;
+    this.managedSchoolName = school.name;
+    this.managedSchoolProvinceCode = this.provinces().find((province) => province.name === school.location)?.code ?? '';
+    this.lastSuggestedManagedSchoolCode = '';
+  }
+
+  cancelManagedSchoolEdit(): void {
+    this.editingManagedSchoolCode = '';
+    this.managedSchoolCode = '';
+    this.managedSchoolName = '';
+    this.managedSchoolProvinceCode = '';
+    this.lastSuggestedManagedSchoolCode = '';
+  }
+
+  saveManagedSchool(form: NgForm): void {
     form.control.markAllAsTouched();
-    if (form.invalid || !this.editingLlmPurpose()) return;
-    const usesEnvironmentKey = !this.llmKey.trim();
-    this.run(this.api.saveLlmConfiguration({
-      purpose: this.llmPurpose,
-      endpoint: this.llmEndpoint.trim(),
-      model: this.llmModel.trim(),
-      apiKey: this.llmKey,
-      active: this.llmActive
-    }), usesEnvironmentKey
-      ? 'Đã lưu cấu hình. API key sẽ được lấy từ biến môi trường.'
-      : 'Đã lưu cấu hình và mã hóa API key.', () => {
-      this.llmKey = '';
-      this.editingLlmPurpose.set(null);
-      form.resetForm({ purpose: this.llmPurpose, endpoint: this.llmEndpoint, model: this.llmModel, active: this.llmActive });
-      this.loadLlm();
+    if (form.invalid) return;
+    const value = {
+      code: this.managedSchoolCode.trim() || undefined,
+      name: this.managedSchoolName.trim(),
+      provinceCode: this.managedSchoolProvinceCode
+    };
+    const editingCode = this.editingManagedSchoolCode;
+    const request = editingCode
+      ? this.api.updateHighSchool(editingCode, value)
+      : this.api.createHighSchool(value);
+    this.run(request, editingCode ? 'Đã cập nhật trường THPT.' : 'Đã tạo trường THPT.', () => {
+      this.cancelManagedSchoolEdit();
+      form.resetForm();
+      this.loadManagedSchools();
+      if (this.auth.isSuperAdmin) this.loadDeletedManagedSchools();
+      this.loadSchoolOptions();
     });
+  }
+
+  deleteManagedSchool(school: AdminHighSchool): void {
+    if (this.deleteSchoolConfirmationCode() !== school.code) {
+      this.deleteSchoolConfirmationCode.set(school.code);
+      return;
+    }
+    this.run(this.api.deleteHighSchool(school.code), 'Đã xóa mềm trường THPT, nhóm môn và bản nháp liên quan.', () => {
+      this.deleteSchoolConfirmationCode.set('');
+      this.loadManagedSchools();
+      if (this.auth.isSuperAdmin) this.loadDeletedManagedSchools();
+      this.loadSchoolOptions();
+      this.loadDraftGroups();
+      this.loadDocuments();
+    });
+  }
+
+  cancelDeleteManagedSchool(): void {
+    this.deleteSchoolConfirmationCode.set('');
   }
 
   statusLabel(status: string): string {
@@ -751,13 +1019,6 @@ export class AdminDashboardComponent implements OnInit {
     if (status === 'RETRY') return 'Đang thử lại đồng bộ';
     if (status === 'RUNNING') return 'Đang đồng bộ';
     return 'Đang chờ đồng bộ';
-  }
-
-  purposeLabel(purpose: string): string {
-    const labels: Record<string, string> = {
-      EXTRACTION: 'Trích xuất tài liệu', CHAT: 'Trò chuyện'
-    };
-    return labels[purpose] ?? purpose;
   }
 
   private run<T>(request: import('rxjs').Observable<T>, success: string, after?: () => void): void {

@@ -6,9 +6,19 @@ import { environment } from '../../../environments/environment';
 import { ApiEnvelope } from '../../core/auth/auth.models';
 
 export interface CursorPage<T> { items: T[]; hasNext: boolean; nextCursor: string; }
+export type GraphSyncStatus = 'PENDING' | 'RUNNING' | 'RETRY' | 'SYNCED';
+export interface DocumentGraphSyncResult {
+  documentId: string; graphPublicationStatus: 'PUBLISHED' | 'UNPUBLISHED';
+  graphSyncStatus: GraphSyncStatus; graphSyncJobId: string | null;
+}
+export interface DocumentGraphSyncJob {
+  documentId: string; graphPublicationStatus: 'PUBLISHED' | 'UNPUBLISHED';
+  graphSyncStatus: GraphSyncStatus; graphSyncJobId: string;
+}
 export interface AdminDocument {
   id: string; title: string; academicYear: string; status: string; schoolName: string; filename: string;
-  errorCode: string | null; graphSyncStatus: 'PENDING' | 'RUNNING' | 'RETRY' | 'SYNCED' | null;
+  errorCode: string | null; graphSyncStatus: GraphSyncStatus | null; graphSyncJobId?: string | null;
+  graphPublicationStatus?: 'PUBLISHED' | 'UNPUBLISHED'; deletedAt?: string | null;
   schoolCode?: string | null; proposedSchoolName?: string | null; proposedSchoolLocation?: string | null;
   proposedSchoolCode?: string | null; schoolLocation?: string | null;
 }
@@ -28,9 +38,16 @@ export interface SubjectGroupDraft {
 }
 export interface AdminUser { id: string; username: string; role: 'SUPER_ADMIN' | 'ADMIN' | 'USER'; active: boolean; }
 export interface AdminCombination { id: string; display: string; componentCount: number; active: boolean; }
-export interface LlmConfiguration {
-  purpose: 'EXTRACTION' | 'CHAT'; endpoint: string; model: string; active: boolean;
-  keyConfigured: boolean; keySource: 'ADMIN' | 'ENVIRONMENT'; environmentKeyConfigured: boolean;
+export interface AdminHighSchool {
+  code: string; name: string; location: string; createdAt: string; updatedAt: string;
+  graphSyncStatus?: GraphSyncStatus; graphSyncJobId?: string | null;
+}
+export interface AdminDeletedHighSchool {
+  code: string; name: string; location: string; deletedAt: string;
+  graphSyncStatus: GraphSyncStatus; graphSyncJobId: string | null;
+}
+export interface HighSchoolGraphSyncResult {
+  schoolCode: string; graphSyncStatus: GraphSyncStatus; graphSyncJobId: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -44,6 +61,20 @@ export class AdminApiService {
     if (cursor) params = params.set('cursor', cursor);
     return this.http.get<ApiEnvelope<CursorPage<AdminDocument>>>(`${this.base}/documents`, { params });
   }
+  deletedDocuments(cursor?: string): Observable<ApiEnvelope<CursorPage<AdminDocument>>> {
+    let params = new HttpParams().set('size', 20);
+    if (cursor) params = params.set('cursor', cursor);
+    return this.http.get<ApiEnvelope<CursorPage<AdminDocument>>>(`${this.base}/documents/deleted`, { params });
+  }
+  unpublishDocument(id: string): Observable<ApiEnvelope<DocumentGraphSyncResult>> {
+    return this.http.post<ApiEnvelope<DocumentGraphSyncResult>>(`${this.base}/documents/${id}/unpublish`, {});
+  }
+  restoreDocument(id: string): Observable<ApiEnvelope<DocumentGraphSyncResult>> {
+    return this.http.post<ApiEnvelope<DocumentGraphSyncResult>>(`${this.base}/documents/${id}/restore`, {});
+  }
+  documentGraphSyncStatus(documentId: string, jobId: string): Observable<ApiEnvelope<DocumentGraphSyncJob>> {
+    return this.http.get<ApiEnvelope<DocumentGraphSyncJob>>(`${this.base}/documents/${documentId}/graph-sync/${jobId}`);
+  }
   draftGroups(cursor?: string): Observable<ApiEnvelope<CursorPage<AdminDraftGroup>>> {
     let params = new HttpParams().set('size', 20);
     if (cursor) params = params.set('cursor', cursor);
@@ -55,7 +86,7 @@ export class AdminApiService {
     return this.http.get<ApiEnvelope<CursorPage<SubjectGroupDraft>>>(`${this.base}/documents/draft-groups/drafts`, { params });
   }
   uploadDocument(file: File, title: string, academicYear: string, schoolCode: string, proposedSchoolName: string,
-      provinceCode: string, proposedSchoolCode: string): Observable<ApiEnvelope<AdminDocument>> {
+    provinceCode: string, proposedSchoolCode: string): Observable<ApiEnvelope<AdminDocument>> {
     const form = new FormData();
     form.append('file', file); form.append('title', title); form.append('academicYear', academicYear);
     if (schoolCode) form.append('schoolCode', schoolCode);
@@ -66,7 +97,7 @@ export class AdminApiService {
   }
   deleteDocument(id: string): Observable<ApiEnvelope<void>> { return this.http.delete<ApiEnvelope<void>>(`${this.base}/documents/${id}`); }
   updateDocument(id: string, title: string, academicYear: string,
-      school?: { schoolCode?: string; proposedSchoolName?: string; provinceCode?: string; proposedSchoolCode?: string }): Observable<ApiEnvelope<void>> {
+    school?: { schoolCode?: string; proposedSchoolName?: string; provinceCode?: string; proposedSchoolCode?: string }): Observable<ApiEnvelope<void>> {
     return this.http.put<ApiEnvelope<void>>(`${this.base}/documents/${id}`, {
       title, academicYear, ...(school ?? {})
     });
@@ -116,8 +147,31 @@ export class AdminApiService {
   updateCombination(id: string, display: string): Observable<ApiEnvelope<void>> { return this.http.put<ApiEnvelope<void>>(`${this.base}/combinations/${encodeURIComponent(id)}`, { display }); }
   archiveCombination(id: string): Observable<ApiEnvelope<void>> { return this.http.delete<ApiEnvelope<void>>(`${this.base}/combinations/${encodeURIComponent(id)}`); }
 
-  llmConfigurations(): Observable<ApiEnvelope<LlmConfiguration[]>> { return this.http.get<ApiEnvelope<LlmConfiguration[]>>(`${this.base}/llm-configurations`); }
-  saveLlmConfiguration(value: { purpose: string; endpoint: string; model: string; apiKey: string; active: boolean }): Observable<ApiEnvelope<void>> {
-    return this.http.post<ApiEnvelope<void>>(`${this.base}/llm-configurations`, value);
+  adminHighSchools(cursor?: string): Observable<ApiEnvelope<CursorPage<AdminHighSchool>>> {
+    let params = new HttpParams().set('size', 20);
+    if (cursor) params = params.set('cursor', cursor);
+    return this.http.get<ApiEnvelope<CursorPage<AdminHighSchool>>>(`${this.base}/high-schools`, { params });
+  }
+  adminDeletedHighSchools(cursor?: string): Observable<ApiEnvelope<CursorPage<AdminDeletedHighSchool>>> {
+    let params = new HttpParams().set('size', 20);
+    if (cursor) params = params.set('cursor', cursor);
+    return this.http.get<ApiEnvelope<CursorPage<AdminDeletedHighSchool>>>(`${this.base}/high-schools/deleted`, { params });
+  }
+  restoreHighSchool(code: string): Observable<ApiEnvelope<HighSchoolGraphSyncResult>> {
+    return this.http.post<ApiEnvelope<HighSchoolGraphSyncResult>>(
+      `${this.base}/high-schools/${encodeURIComponent(code)}/restore`, {});
+  }
+  highSchoolGraphSyncStatus(code: string, jobId: string): Observable<ApiEnvelope<HighSchoolGraphSyncResult>> {
+    return this.http.get<ApiEnvelope<HighSchoolGraphSyncResult>>(
+      `${this.base}/high-schools/${encodeURIComponent(code)}/graph-sync/${encodeURIComponent(jobId)}`);
+  }
+  createHighSchool(value: { code?: string; name: string; provinceCode: string }): Observable<ApiEnvelope<AdminHighSchool>> {
+    return this.http.post<ApiEnvelope<AdminHighSchool>>(`${this.base}/high-schools`, value);
+  }
+  updateHighSchool(code: string, value: { code?: string; name: string; provinceCode: string }): Observable<ApiEnvelope<AdminHighSchool>> {
+    return this.http.put<ApiEnvelope<AdminHighSchool>>(`${this.base}/high-schools/${encodeURIComponent(code)}`, value);
+  }
+  deleteHighSchool(code: string): Observable<ApiEnvelope<void>> {
+    return this.http.delete<ApiEnvelope<void>>(`${this.base}/high-schools/${encodeURIComponent(code)}`);
   }
 }

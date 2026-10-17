@@ -138,7 +138,8 @@ describe('SubjectSearchComponent group search', () => {
 
     expect(service.getSubjectGroupsBySchool).toHaveBeenCalledWith('HS1', '2026-2027');
     expect(service.searchBySubjects).toHaveBeenCalledOnceWith({
-      subjectCodes: ['PHYSICS', 'CHEMISTRY', 'BIOLOGY', 'INFORMATICS']
+      subjectCodes: ['PHYSICS', 'CHEMISTRY', 'BIOLOGY', 'INFORMATICS'],
+      schoolCode: 'HS1', academicYear: '2026-2027', groupCode: 'G1'
     });
     expect((fixture.nativeElement as HTMLElement).querySelector('.combo-card__name')?.textContent)
       .toContain('A00');
@@ -165,6 +166,101 @@ describe('SubjectSearchComponent group search', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.combo-card__name')?.textContent)
       .toContain('D01');
     expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('A00 —');
+  });
+
+  async function chooseYear(year: string): Promise<void> {
+    const select = fixture.nativeElement.querySelector('select[aria-label="Năm học áp dụng"]') as HTMLSelectElement;
+    expect(select.disabled).toBeFalse();
+    select.value = year;
+    select.dispatchEvent(new Event('change'));
+    await Promise.resolve();
+    fixture.detectChanges();
+  }
+
+  it('allows choosing another year and sends that context in combination and major requests', async () => {
+    service.getAcademicYears.and.returnValue(of({ success: true, data: ['2026-2027', '2025-2026'] }));
+    service.searchBySubjects.and.returnValue(of({
+      ...result('A00'), data: { ...result('A00').data, universities: [{ universityCode: 'DQN', universityName: 'Quy Nhơn' }] }
+    }));
+    await chooseSchool();
+    chooseGroup(0);
+    await fixture.whenStable();
+
+    const olderGroups = groups.map((group) => ({ ...group, academicYear: '2025-2026' }));
+    service.getSubjectGroupsBySchool.and.returnValue(of({ success: true, data: olderGroups }));
+    await chooseYear('2025-2026');
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(service.getSubjectGroupsBySchool).toHaveBeenCalledWith('HS1', '2025-2026');
+    expect(fixture.nativeElement.querySelector('.combo-card__name')).toBeNull();
+
+    chooseGroup(0);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(service.searchBySubjects.calls.mostRecent().args[0]).toEqual({
+      subjectCodes: ['PHYSICS', 'CHEMISTRY', 'BIOLOGY', 'INFORMATICS'],
+      schoolCode: 'HS1', academicYear: '2025-2026', groupCode: 'G1'
+    });
+
+    // The major request must preserve the same year instead of returning to the default.
+    const majorsTab = Array.from(fixture.nativeElement.querySelectorAll('button[role="tab"]') as NodeListOf<HTMLButtonElement>)
+      .find((button) => button.textContent?.includes('Ngành đào tạo'))!;
+    majorsTab.click();
+    fixture.detectChanges();
+    const university = fixture.nativeElement.querySelector('.university-filter select') as HTMLSelectElement;
+    expect(university).not.toBeNull();
+    university.value = 'DQN';
+    university.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(service.searchBySubjects.calls.mostRecent().args[0]).toEqual({
+      subjectCodes: ['PHYSICS', 'CHEMISTRY', 'BIOLOGY', 'INFORMATICS'],
+      schoolCode: 'HS1', academicYear: '2025-2026', groupCode: 'G1', universityCode: 'DQN'
+    });
+  });
+
+  it('keeps the year control visible after a load failure and allows retry', async () => {
+    service.getAcademicYears.and.returnValue(throwError(() => new Error('500')));
+    const school = fixture.nativeElement.querySelector('select[aria-label="Chọn trường THPT"]') as HTMLSelectElement;
+    school.value = 'HS1';
+    school.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const year = fixture.nativeElement.querySelector('select[aria-label="Năm học áp dụng"]') as HTMLSelectElement;
+    expect(year).not.toBeNull();
+    expect(year.disabled).toBeTrue();
+    expect(service.getSubjectGroupsBySchool).not.toHaveBeenCalled();
+
+    service.getAcademicYears.and.returnValue(of({ success: true, data: ['2026-2027'] }));
+    (fixture.nativeElement.querySelector('.engine-alert__retry-btn') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(year.disabled).toBeFalse();
+    expect(year.value).toBe('2026-2027');
+    expect(service.getSubjectGroupsBySchool).toHaveBeenCalledWith('HS1', '2026-2027');
+  });
+
+  it('ignores late groups and search results from a previously selected year', async () => {
+    service.getAcademicYears.and.returnValue(of({ success: true, data: ['2026-2027', '2025-2026'] }));
+    const oldSearch = new Subject<ApiResponse<SubjectSearchResponse>>();
+    service.searchBySubjects.and.returnValue(oldSearch);
+    await chooseSchool();
+    chooseGroup(0);
+
+    const olderGroups = new Subject<ApiResponse<SubjectGroupDto[]>>();
+    const newerGroups = new Subject<ApiResponse<SubjectGroupDto[]>>();
+    service.getSubjectGroupsBySchool.and.returnValues(olderGroups, newerGroups);
+    await chooseYear('2025-2026');
+    await chooseYear('2026-2027');
+    newerGroups.next({ success: true, data: groups });
+    await Promise.resolve();
+    fixture.detectChanges();
+    olderGroups.next({ success: true, data: [{ ...groups[0], academicYear: '2025-2026', groupName: 'Old year group' }] });
+    oldSearch.next(result('OLD_RESULT'));
+    await Promise.resolve();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('button.group-card').length).toBe(2);
+    expect(fixture.nativeElement.textContent).not.toContain('Old year group');
+    expect(fixture.nativeElement.querySelector('.combo-card__name')).toBeNull();
   });
 
   it('shows a search error for the selected group', async () => {

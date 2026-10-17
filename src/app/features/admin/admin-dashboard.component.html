@@ -14,12 +14,13 @@
   <nav class="tab-list" role="tablist" aria-label="Các phân hệ quản trị">
     <button id="tab-documents" role="tab" type="button" [attr.aria-selected]="tab==='documents'"
       [class.selected]="tab==='documents'" (click)="selectTab('documents')">Tài liệu THPT</button>
+    <button *ngIf="auth.isAdmin" id="tab-schools" role="tab" type="button" [attr.aria-selected]="tab==='schools'"
+      [class.selected]="tab==='schools'" (click)="selectTab('schools')">Trường THPT</button>
     <button *ngIf="auth.isSuperAdmin" id="tab-users" role="tab" type="button" [attr.aria-selected]="tab==='users'"
       [class.selected]="tab==='users'" (click)="selectTab('users')">Người dùng</button>
-    <button *ngIf="auth.isSuperAdmin" id="tab-combinations" role="tab" type="button" [attr.aria-selected]="tab==='combinations'"
-      [class.selected]="tab==='combinations'" (click)="selectTab('combinations')">Tổ hợp tuyển sinh</button>
-    <button *ngIf="auth.isSuperAdmin" id="tab-llm" role="tab" type="button" [attr.aria-selected]="tab==='llm'"
-      [class.selected]="tab==='llm'" (click)="selectTab('llm')">Cấu hình AI</button>
+    <button *ngIf="auth.isSuperAdmin" id="tab-combinations" role="tab" type="button"
+      [attr.aria-selected]="tab==='combinations'" [class.selected]="tab==='combinations'"
+      (click)="selectTab('combinations')">Tổ hợp tuyển sinh</button>
   </nav>
 
   <p class="notice" *ngIf="message()" [class.notice--error]="messageIsError()"
@@ -27,222 +28,658 @@
 
   <section *ngIf="tab==='documents'" role="tabpanel" aria-labelledby="tab-documents">
     <div class="section-heading">
-      <div><p class="eyebrow">DỮ LIỆU TRƯỜNG THPT</p><h2>Tài liệu và nhóm môn</h2>
-        <p>Tải PDF hoặc ảnh để trích xuất nhóm môn, kiểm tra bản nháp và theo dõi trạng thái xử lý.</p></div>
+      <div>
+        <p class="eyebrow">DỮ LIỆU TRƯỜNG THPT</p>
+        <h2>Tài liệu và nhóm môn</h2>
+        <p>Tải PDF hoặc ảnh để trích xuất nhóm môn, kiểm tra bản nháp và theo dõi trạng thái xử lý.</p>
+      </div>
     </div>
 
     <section class="panel upload-panel" aria-labelledby="upload-title">
       <div class="panel-heading"><span class="icon-tile" aria-hidden="true">↑</span>
-        <div><h3 id="upload-title">Tải tài liệu PDF hoặc ảnh</h3><p>Chọn trường hiện có hoặc khai báo trường mới. Mỗi lần tải một ảnh.</p></div></div>
+        <div>
+          <h3 id="upload-title">Tải tài liệu PDF hoặc ảnh</h3>
+          <p>Chọn trường hiện có hoặc khai báo trường mới. Mỗi lần tải một ảnh.</p>
+        </div>
+      </div>
       <form class="form-grid" (ngSubmit)="upload(uploadForm)" #uploadForm="ngForm">
-        <label>Tên tài liệu<input name="title" [(ngModel)]="uploadTitle" placeholder="Ví dụ: Phương án tổ chức môn học" required></label>
-        <label>Năm học<app-academic-year-picker name="year" [(ngModel)]="academicYear" required></app-academic-year-picker></label>
+        <label>Tên tài liệu<input name="title" [(ngModel)]="uploadTitle" placeholder="Ví dụ: Phương án tổ chức môn học"
+            required></label>
+        <label>Năm học<app-academic-year-picker name="year" [(ngModel)]="academicYear"
+            required></app-academic-year-picker></label>
         <label>Loại trường<select name="schoolType" [(ngModel)]="schoolType" (ngModelChange)="changeSchoolType($event)">
-          <option value="existing">Chọn trường đã có</option><option value="new">Khai báo trường mới</option></select></label>
+            <option value="existing">Chọn trường đã có</option>
+            <option value="new">Khai báo trường mới</option>
+          </select></label>
         <label *ngIf="schoolType==='existing'">Trường THPT<select name="schoolCode" [(ngModel)]="schoolCode" required>
-          <option value="">Chọn trường</option><option *ngFor="let school of schools()" [value]="school.code">{{ school.name }} ({{ school.code }})</option></select>
+            <option value="">Chọn trường</option>
+            <option *ngFor="let school of schools()" [value]="school.code">{{ school.name }} ({{ school.code }})
+            </option>
+          </select>
           <small class="field-error" *ngIf="schoolsError()">{{ schoolsError() }}</small></label>
         <ng-container *ngIf="schoolType==='new'">
-          <label>Tên trường mới<input name="schoolName" [(ngModel)]="proposedSchoolName" (blur)="loadSchoolCodeSuggestion()" (ngModelChange)="onProposedSchoolNameChanged()" placeholder="Ví dụ: Trường THPT Tôn Đức Thắng" required></label>
-          <label>Tỉnh/Thành phố<select name="provinceCode" [(ngModel)]="provinceCode" (ngModelChange)="onProvinceChanged()" required>
-            <option value="">Chọn tỉnh/thành phố</option><option *ngFor="let province of provinces()" [value]="province.code">{{ province.name }}</option></select>
+          <label>Tên trường mới<input name="schoolName" [(ngModel)]="proposedSchoolName"
+              (blur)="loadSchoolCodeSuggestion()" (ngModelChange)="onProposedSchoolNameChanged()"
+              placeholder="Ví dụ: Trường THPT Tôn Đức Thắng" required></label>
+          <label>Tỉnh/Thành phố<select name="provinceCode" [(ngModel)]="provinceCode"
+              (ngModelChange)="onProvinceChanged()" required>
+              <option value="">Chọn tỉnh/thành phố</option>
+              <option *ngFor="let province of provinces()" [value]="province.code">{{ province.name }}</option>
+            </select>
             <small class="field-error" *ngIf="provincesError()">{{ provincesError() }}</small></label>
-          <label>Mã trường<input name="proposedSchoolCode" [(ngModel)]="proposedSchoolCode" (ngModelChange)="onProposedSchoolCodeChanged()" (blur)="loadSchoolCodeSuggestion(true)" placeholder="Tự gợi ý theo tên trường" required>
-            <small *ngIf="schoolCodeSuggestion() as suggestion" class="code-hint" [class.code-hint--error]="!suggestion.available && !suggestion.canReuseExistingSchool">
+          <label>Mã trường<input name="proposedSchoolCode" [(ngModel)]="proposedSchoolCode"
+              (ngModelChange)="onProposedSchoolCodeChanged()" (blur)="loadSchoolCodeSuggestion(true)"
+              placeholder="Tự gợi ý theo tên trường" required>
+            <small *ngIf="schoolCodeSuggestion() as suggestion" class="code-hint"
+              [class.code-hint--error]="!suggestion.available && !suggestion.canReuseExistingSchool">
               <ng-container *ngIf="suggestion.available">Mã gợi ý: {{ suggestion.suggestedCode }}</ng-container>
-              <ng-container *ngIf="!suggestion.available && suggestion.canReuseExistingSchool">Mã đã thuộc {{ suggestion.existingSchoolName }} · {{ suggestion.existingSchoolLocation }}.</ng-container>
-              <ng-container *ngIf="!suggestion.available && !suggestion.canReuseExistingSchool">Mã này đã được sử dụng. Hãy nhập mã khác.</ng-container>
+              <ng-container *ngIf="!suggestion.available && suggestion.canReuseExistingSchool">Mã đã thuộc {{
+                suggestion.existingSchoolName }} · {{ suggestion.existingSchoolLocation }}.</ng-container>
+              <ng-container *ngIf="!suggestion.available && !suggestion.canReuseExistingSchool">Mã này đã được sử dụng.
+                Hãy nhập mã khác.</ng-container>
             </small>
-            <button *ngIf="schoolCodeSuggestion()?.canReuseExistingSchool" class="button button--quiet button--small" type="button" (click)="useSuggestedExistingSchool()">Dùng trường đã có</button>
+            <button *ngIf="schoolCodeSuggestion()?.canReuseExistingSchool" class="button button--quiet button--small"
+              type="button" (click)="useSuggestedExistingSchool()">Dùng trường đã có</button>
             <small class="field-error" *ngIf="schoolCodeSuggestionError()">{{ schoolCodeSuggestionError() }}</small>
           </label>
         </ng-container>
-        <label class="file-field form-span">Tệp PDF hoặc ảnh (PNG, JPEG, WebP)<input type="file" accept="application/pdf,image/png,image/jpeg,image/webp,.pdf,.png,.jpg,.jpeg,.webp" (change)="onFile($event)" required
-          [class.is-invalid]="(uploadAttempted() && !file) || !!fileError()" [attr.aria-invalid]="(uploadAttempted() && !file) || !!fileError()">
+        <label class="file-field form-span">Tệp PDF hoặc ảnh (PNG, JPEG, WebP)<input type="file"
+            accept="application/pdf,image/png,image/jpeg,image/webp,.pdf,.png,.jpg,.jpeg,.webp"
+            (change)="onFile($event)" required [class.is-invalid]="(uploadAttempted() && !file) || !!fileError()"
+            [attr.aria-invalid]="(uploadAttempted() && !file) || !!fileError()">
           <small class="field-error" *ngIf="uploadAttempted() && !file">Vui lòng chọn tệp PDF hoặc ảnh.</small>
           <small class="field-error" *ngIf="fileError()">{{ fileError() }}</small></label>
         <div class="form-actions form-span"><button class="button button--primary" type="submit" [disabled]="busy()">
-          {{ busy() ? 'Đang tải lên…' : 'Tải lên và bắt đầu trích xuất' }}</button></div>
+            {{ busy() ? 'Đang tải lên…' : 'Tải lên và bắt đầu trích xuất' }}</button></div>
       </form>
     </section>
 
     <section class="panel edit-panel" *ngIf="editingDocument" aria-labelledby="edit-document-title">
       <div class="panel-heading"><span class="icon-tile" aria-hidden="true">✎</span>
-        <div><h3 id="edit-document-title">Chỉnh sửa tài liệu</h3><p>{{ editingDocument.title }}</p></div></div>
+        <div>
+          <h3 id="edit-document-title">Chỉnh sửa tài liệu</h3>
+          <p>{{ editingDocument.title }}</p>
+        </div>
+      </div>
       <form class="form-grid" (ngSubmit)="saveDocumentEdit(editForm)" #editForm="ngForm">
         <label>Tên tài liệu<input name="editTitle" [(ngModel)]="editTitle" required maxlength="250"></label>
-        <label>Năm học<app-academic-year-picker name="editYear" [(ngModel)]="editAcademicYear" required></app-academic-year-picker></label>
+        <label>Năm học<app-academic-year-picker name="editYear" [(ngModel)]="editAcademicYear"
+            required></app-academic-year-picker></label>
         <ng-container *ngIf="editingDocument.schoolCode == null">
-          <label>Tên trường mới<input name="editSchoolName" [(ngModel)]="editProposedSchoolName" (blur)="loadSchoolCodeSuggestion(false, true)" (ngModelChange)="onEditSchoolNameChanged()" required></label>
-          <label>Tỉnh/Thành phố<select name="editProvinceCode" [(ngModel)]="editProvinceCode" (ngModelChange)="onEditProvinceChanged()" required>
-            <option value="">Chọn tỉnh/thành phố</option><option *ngFor="let province of provinces()" [value]="province.code">{{ province.name }}</option></select></label>
-          <label>Mã trường<input name="editSchoolCode" [(ngModel)]="editProposedSchoolCode" (blur)="loadSchoolCodeSuggestion(true, true)" (ngModelChange)="onEditSchoolCodeChanged()" required>
-            <small class="field-error" *ngIf="editSchoolCodeSuggestionError()">{{ editSchoolCodeSuggestionError() }}</small>
-            <button *ngIf="editSchoolCodeSuggestion()?.canReuseExistingSchool" class="button button--quiet button--small" type="button" (click)="useSuggestedExistingSchoolForEdit()">Chuyển sang trường đã có</button>
-            <small *ngIf="editExistingSchoolCode">Tài liệu sẽ liên kết với {{ editSchoolCodeSuggestion()?.existingSchoolName }}.</small></label>
+          <label>Tên trường mới<input name="editSchoolName" [(ngModel)]="editProposedSchoolName"
+              (blur)="loadSchoolCodeSuggestion(false, true)" (ngModelChange)="onEditSchoolNameChanged()"
+              required></label>
+          <label>Tỉnh/Thành phố<select name="editProvinceCode" [(ngModel)]="editProvinceCode"
+              (ngModelChange)="onEditProvinceChanged()" required>
+              <option value="">Chọn tỉnh/thành phố</option>
+              <option *ngFor="let province of provinces()" [value]="province.code">{{ province.name }}</option>
+            </select></label>
+          <label>Mã trường<input name="editSchoolCode" [(ngModel)]="editProposedSchoolCode"
+              (blur)="loadSchoolCodeSuggestion(true, true)" (ngModelChange)="onEditSchoolCodeChanged()" required>
+            <small class="field-error" *ngIf="editSchoolCodeSuggestionError()">{{ editSchoolCodeSuggestionError()
+              }}</small>
+            <button *ngIf="editSchoolCodeSuggestion()?.canReuseExistingSchool"
+              class="button button--quiet button--small" type="button"
+              (click)="useSuggestedExistingSchoolForEdit()">Chuyển sang trường đã có</button>
+            <small *ngIf="editExistingSchoolCode">Tài liệu sẽ liên kết với {{
+              editSchoolCodeSuggestion()?.existingSchoolName }}.</small></label>
         </ng-container>
-        <div class="form-actions form-span"><button class="button button--primary" [disabled]="busy()">Lưu thay đổi</button>
-          <button class="button button--quiet" type="button" (click)="cancelEditDocument()">Hủy</button></div>
+        <div class="form-actions form-span"><button class="button button--primary" [disabled]="busy()">Lưu thay
+            đổi</button>
+          <button class="button button--quiet" type="button" (click)="cancelEditDocument()">Hủy</button>
+        </div>
       </form>
     </section>
 
     <section class="content-section" aria-labelledby="documents-title">
-      <div class="section-heading section-heading--compact"><div><h3 id="documents-title">Danh sách tài liệu</h3>
-        <p>Các tài liệu đã tải lên và trạng thái trích xuất.</p></div>
-        <button class="button button--quiet" type="button" [disabled]="loadingDocuments()" (click)="loadDocuments()">Làm mới</button></div>
-      <div class="panel table-panel">
-        <div class="loading-state" *ngIf="loadingDocuments()" role="status"><span class="spinner"></span>Đang tải tài liệu…</div>
-        <div class="error-state" *ngIf="documentsError()" role="alert"><span>{{ documentsError() }}</span>
-          <button class="button button--quiet" type="button" (click)="loadDocuments()">Thử tải lại</button></div>
-        <div class="empty-state" *ngIf="!loadingDocuments() && !documentsError() && documents().length===0">
-          <span class="empty-icon" aria-hidden="true">▤</span><strong>Chưa có tài liệu</strong><p>Tải PDF hoặc ảnh đầu tiên để bắt đầu quản lý nhóm môn.</p></div>
-        <div class="table-wrap" *ngIf="documents().length>0"><table><thead><tr><th>Tài liệu</th><th>Trường</th><th>Năm học</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
-          <tbody><tr *ngFor="let document of documents()"><td><strong>{{ document.title }}</strong><small class="cell-subtitle">{{ document.filename }}</small></td>
-            <td>{{ document.schoolName || 'Chưa xác định' }}</td><td>{{ document.academicYear }}</td>
-            <td><span class="status-badge" [ngClass]="statusClass(document.status)">{{ statusLabel(document.status) }}</span>
-              <small class="cell-subtitle" *ngIf="document.status==='FAILED'">{{ extractionError(document.errorCode) }}</small>
-              <small class="cell-subtitle" *ngIf="document.status==='PUBLISHED'">Neo4j: {{ document.graphSyncStatus ? graphSyncLabel(document.graphSyncStatus) : 'Chưa có trạng thái đồng bộ' }}</small></td>
-            <td><div class="actions"><button class="button button--quiet button--small" type="button" (click)="download(document)">Tải tài liệu</button>
-              <button class="button button--quiet button--small" type="button" *ngIf="document.status!=='PUBLISHED' && document.status!=='DELETED' && document.status!=='DELETE_REQUESTED'" (click)="editDocument(document)">Sửa</button>
-              <button class="button button--quiet button--small" type="button" *ngIf="document.status==='FAILED'" [disabled]="busy()" (click)="retryExtraction(document)">Thử trích xuất lại</button>
-              <button class="button button--primary button--small" type="button" *ngIf="document.status==='DELETE_REQUESTED' && auth.isSuperAdmin" (click)="approveDelete(document)">Duyệt xóa</button>
-              <button class="button button--danger button--small" type="button" *ngIf="document.status!=='DELETE_REQUESTED' && document.status!=='DELETED' && !auth.isSuperAdmin" (click)="requestDelete(document)">Yêu cầu xóa</button>
-              <button class="button button--danger button--small" type="button" *ngIf="document.status!=='DELETE_REQUESTED' && document.status!=='DELETED' && auth.isSuperAdmin" (click)="requestDelete(document)">Xóa mềm</button>
-            </div></td></tr></tbody></table></div>
+      <div class="section-heading section-heading--compact">
+        <div>
+          <h3 id="documents-title">Danh sách tài liệu</h3>
+          <p>Các tài liệu đã tải lên và trạng thái trích xuất.</p>
+        </div>
+        <button class="button button--quiet" type="button" [disabled]="loadingDocuments()" (click)="loadDocuments()">Làm
+          mới</button>
       </div>
-      <button class="button button--quiet load-more" *ngIf="documentsHasNext()" [disabled]="loadingDocuments()" (click)="loadDocuments(documentsCursor())">Tải thêm tài liệu</button>
+      <div class="panel table-panel">
+        <div class="loading-state" *ngIf="loadingDocuments()" role="status"><span class="spinner"></span>Đang tải tài
+          liệu…</div>
+        <div class="error-state" *ngIf="documentsError()" role="alert"><span>{{ documentsError() }}</span>
+          <button class="button button--quiet" type="button" (click)="loadDocuments()">Thử tải lại</button>
+        </div>
+        <div class="empty-state" *ngIf="!loadingDocuments() && !documentsError() && documents().length===0">
+          <span class="empty-icon" aria-hidden="true">▤</span><strong>Chưa có tài liệu</strong>
+          <p>Tải PDF hoặc ảnh đầu tiên để bắt đầu quản lý nhóm môn.</p>
+        </div>
+        <div class="table-wrap" *ngIf="documents().length>0">
+          <table>
+            <thead>
+              <tr>
+                <th>Tài liệu</th>
+                <th>Trường</th>
+                <th>Năm học</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let document of documents()">
+                <td><strong>{{ document.title }}</strong><small class="cell-subtitle">{{ document.filename }}</small>
+                </td>
+                <td>{{ document.schoolName || 'Chưa xác định' }}</td>
+                <td>{{ document.academicYear }}</td>
+                <td><span class="status-badge" [ngClass]="statusClass(document.status)">{{ statusLabel(document.status)
+                    }}</span>
+                  <small class="cell-subtitle" *ngIf="document.status==='FAILED'">{{ extractionError(document.errorCode)
+                    }}</small>
+                  <small class="cell-subtitle" *ngIf="document.status==='PUBLISHED'">Neo4j: {{ document.graphSyncStatus
+                    ? graphSyncLabel(document.graphSyncStatus) : 'Chưa có trạng thái đồng bộ' }}</small>
+                </td>
+                <td>
+                  <div class="actions"><button class="button button--quiet button--small" type="button"
+                      (click)="download(document)">Tải tài liệu</button>
+                    <button class="button button--quiet button--small" type="button"
+                      *ngIf="document.status!=='PUBLISHED' && document.status!=='DELETED' && document.status!=='DELETE_REQUESTED'"
+                      (click)="editDocument(document)">Sửa</button>
+                    <button class="button button--quiet button--small" type="button" *ngIf="document.status==='FAILED'"
+                      [disabled]="busy()" (click)="retryExtraction(document)">Thử trích xuất lại</button>
+                    <button class="button button--primary button--small" type="button"
+                      *ngIf="document.status==='DELETE_REQUESTED' && auth.isSuperAdmin"
+                      (click)="approveDelete(document)">Duyệt xóa</button>
+                    <button class="button button--danger button--small" type="button"
+                      *ngIf="document.status!=='DELETED' && document.status!=='DELETE_REQUESTED'"
+                      (click)="requestDelete(document)">{{ auth.isSuperAdmin ? 'Xóa mềm' : 'Yêu cầu xóa' }}</button>
+                    <span class="status-badge status-badge--warning" *ngIf="document.status==='DELETE_REQUESTED' && !auth.isSuperAdmin">
+                      Chờ SUPER_ADMIN duyệt
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <button class="button button--quiet load-more" *ngIf="documentsHasNext()" [disabled]="loadingDocuments()"
+        (click)="loadDocuments(documentsCursor())">Tải thêm tài liệu</button>
+    </section>
+
+    <section class="content-section" *ngIf="auth.isSuperAdmin" aria-labelledby="deleted-documents-title">
+      <div class="section-heading section-heading--compact">
+        <div>
+          <h3 id="deleted-documents-title">Tài liệu đã xóa mềm</h3>
+          <p>Khôi phục tài liệu hoặc ngừng công bố các nhóm môn do tài liệu đó đóng góp.</p>
+        </div>
+        <button class="button button--quiet" type="button" [disabled]="loadingDeletedDocuments()"
+          (click)="loadDeletedDocuments()">Làm mới</button>
+      </div>
+      <div class="panel table-panel">
+        <div class="loading-state" *ngIf="loadingDeletedDocuments()" role="status"><span class="spinner"></span>Đang tải
+          tài liệu đã xóa…</div>
+        <div class="error-state" *ngIf="deletedDocumentsError()" role="alert"><span>{{ deletedDocumentsError() }}</span>
+          <button class="button button--quiet" type="button" (click)="loadDeletedDocuments()">Thử tải lại</button>
+        </div>
+        <div class="empty-state"
+          *ngIf="!loadingDeletedDocuments() && !deletedDocumentsError() && deletedDocuments().length===0">
+          <strong>Không có tài liệu đã xóa mềm.</strong>
+        </div>
+        <div class="table-wrap" *ngIf="deletedDocuments().length>0">
+          <table>
+            <thead>
+              <tr>
+                <th>Tài liệu</th>
+                <th>Trường</th>
+                <th>Năm học</th>
+                <th>Trạng thái graph</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let document of deletedDocuments()">
+                <td><strong>{{ document.title }}</strong><small class="cell-subtitle">{{ document.filename }}</small>
+                </td>
+                <td>{{ document.schoolName || 'Chưa xác định' }}</td>
+                <td>{{ document.academicYear }}</td>
+                <td><span class="status-badge"
+                    [class.status-badge--success]="document.graphPublicationStatus==='PUBLISHED'"
+                    [class.status-badge--warning]="document.graphPublicationStatus==='UNPUBLISHED'">
+                    {{ document.graphPublicationStatus==='UNPUBLISHED' ? 'Đã ngừng công bố' : 'Đang công bố' }}</span>
+                  <small class="cell-subtitle">Neo4j: {{ graphSyncLabel(document.graphSyncStatus || 'SYNCED') }}</small>
+                </td>
+                <td>
+                  <div class="actions"><button class="button button--quiet button--small" type="button"
+                      (click)="download(document)">Tài liệu nguồn</button>
+                    <button class="button button--danger button--small" type="button"
+                      *ngIf="document.graphPublicationStatus!=='UNPUBLISHED'"
+                      [disabled]="busy() || isGraphSyncPending(document)"
+                      (click)="unpublishDeletedDocument(document)">Ngừng công bố</button>
+                    <button class="button button--primary button--small" type="button"
+                      [disabled]="busy() || isGraphSyncPending(document)"
+                      (click)="restoreDeletedDocument(document)">Khôi phục</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <button class="button button--quiet load-more" *ngIf="deletedDocumentsHasNext()"
+        [disabled]="loadingDeletedDocuments()" (click)="loadDeletedDocuments(deletedDocumentsCursor())">Tải thêm tài
+        liệu</button>
     </section>
 
     <section class="content-section" aria-labelledby="drafts-title">
-      <div class="section-heading section-heading--compact"><div><h3 id="drafts-title">Bản nháp nhóm môn</h3>
-        <p>{{ auth.isSuperAdmin ? 'Xem và duyệt bản nháp theo trường, năm học và tài liệu nguồn.' : 'Chỉnh sửa bản nháp theo trường, năm học rồi gửi SUPER_ADMIN duyệt.' }}</p></div>
-        <button class="button button--quiet" type="button" [disabled]="loadingDraftGroups()" (click)="loadDraftGroups()">Làm mới</button></div>
-      <div class="loading-state" *ngIf="loadingDraftGroups()" role="status"><span class="spinner"></span>Đang tải nhóm trường…</div>
+      <div class="section-heading section-heading--compact">
+        <div>
+          <h3 id="drafts-title">Bản nháp nhóm môn</h3>
+          <p>{{ auth.isSuperAdmin ? 'Xem và duyệt bản nháp theo trường, năm học và tài liệu nguồn.' : 'Chỉnh sửa bản
+            nháp theo trường, năm học rồi gửi SUPER_ADMIN duyệt.' }}</p>
+        </div>
+        <button class="button button--quiet" type="button" [disabled]="loadingDraftGroups()"
+          (click)="loadDraftGroups()">Làm mới</button>
+      </div>
+      <div class="loading-state" *ngIf="loadingDraftGroups()" role="status"><span class="spinner"></span>Đang tải nhóm
+        trường…</div>
       <div class="error-state" *ngIf="draftGroupsError()" role="alert"><span>{{ draftGroupsError() }}</span>
-        <button class="button button--quiet" type="button" (click)="loadDraftGroups()">Thử tải lại</button></div>
+        <button class="button button--quiet" type="button" (click)="loadDraftGroups()">Thử tải lại</button>
+      </div>
       <div class="empty-state panel" *ngIf="!loadingDraftGroups() && !draftGroupsError() && draftGroups().length===0">
-        <span class="empty-icon" aria-hidden="true">✓</span><strong>Không có bản nháp cần xử lý</strong><p>Bản nháp mới sẽ xuất hiện theo trường và năm học sau khi tài liệu được trích xuất.</p></div>
+        <span class="empty-icon" aria-hidden="true">✓</span><strong>Không có bản nháp cần xử lý</strong>
+        <p>Bản nháp mới sẽ xuất hiện theo trường và năm học sau khi tài liệu được trích xuất.</p>
+      </div>
       <article class="draft-group" *ngFor="let group of draftGroups()">
-        <button class="draft-group-toggle" type="button" [attr.aria-expanded]="group.expanded" (click)="toggleDraftGroup(group)">
-          <span><strong>{{ group.schoolName }}</strong><span class="draft-group-kind" *ngIf="!group.schoolCode">Trường khai báo mới</span>
+        <button class="draft-group-toggle" type="button" [attr.aria-expanded]="group.expanded"
+          (click)="toggleDraftGroup(group)">
+          <span><strong>{{ group.schoolName }}</strong><span class="draft-group-kind" *ngIf="!group.schoolCode">Trường
+              khai báo mới</span>
             <small *ngIf="group.location">{{ group.location }} · Năm học {{ group.academicYear }}</small>
             <small *ngIf="!group.location">Năm học {{ group.academicYear }}</small></span>
-          <span class="draft-group-count">{{ group.draftCount }} bản nháp · {{ group.sourceDocumentCount }} tài liệu <span aria-hidden="true">{{ group.expanded ? '−' : '+' }}</span></span>
+          <span class="draft-group-count">{{ group.draftCount }} bản nháp · {{ group.sourceDocumentCount }} tài liệu
+            <span aria-hidden="true">{{ group.expanded ? '−' : '+' }}</span></span>
         </button>
         <div class="draft-group-content" *ngIf="group.expanded">
-          <div class="loading-state" *ngIf="group.loading" role="status"><span class="spinner"></span>Đang tải bản nháp…</div>
+          <div class="loading-state" *ngIf="group.loading" role="status"><span class="spinner"></span>Đang tải bản nháp…
+          </div>
           <div class="error-state" *ngIf="group.error" role="alert"><span>{{ group.error }}</span>
-            <button class="button button--quiet" type="button" (click)="loadGroupDrafts(group)">Thử tải lại</button></div>
-          <div class="empty-state" *ngIf="group.loaded && !group.loading && !group.error && group.drafts.length===0">Không còn bản nháp trong nhóm này.</div>
+            <button class="button button--quiet" type="button" (click)="loadGroupDrafts(group)">Thử tải lại</button>
+          </div>
+          <div class="empty-state" *ngIf="group.loaded && !group.loading && !group.error && group.drafts.length===0">
+            Không còn bản nháp trong nhóm này.</div>
           <section class="source-document" *ngFor="let source of sourceDocuments(group)">
-            <div class="source-document-heading"><div><h4>{{ source.title }} <small>· Nguồn {{ source.versionNumber }}</small></h4><p>{{ source.filename }} · {{ statusLabel(source.status) }}</p></div>
-              <span class="status-badge" [ngClass]="statusClass(source.status)">{{ statusLabel(source.status) }}</span></div>
-            <p class="draft-lock-note" *ngIf="source.status==='DELETE_REQUESTED'">Tài liệu đang chờ duyệt xóa; không thể sửa, gửi duyệt hoặc công bố bản nháp.</p>
+            <div class="source-document-heading">
+              <div>
+                <h4>{{ source.title }} <small>· Nguồn {{ source.versionNumber }}</small></h4>
+                <p>{{ source.filename }} · {{ statusLabel(source.status) }}</p>
+              </div>
+              <span class="status-badge" [ngClass]="statusClass(source.status)">{{ statusLabel(source.status) }}</span>
+            </div>
+            <p class="draft-lock-note" *ngIf="source.status==='DELETE_REQUESTED'">Tài liệu đang chờ duyệt xóa; không thể
+              sửa, gửi duyệt hoặc công bố bản nháp.</p>
             <article class="draft-card" *ngFor="let draft of draftsForSource(group, source.documentVersionId)">
-              <div class="draft-heading"><div><span class="status-badge status-badge--review">{{ statusLabel(draft.status) }}</span>
-                <h4>{{ draft.groupCode }} · {{ draft.groupName }}</h4></div>
-                <span class="source-pages">Trang/ảnh nguồn: {{ draft.sourcePages.join(', ') || '—' }}</span></div>
-              <div class="form-grid draft-fields"><label>Mã nhóm<input [(ngModel)]="draft.groupCode" (ngModelChange)="resetGroupReview(group)" [name]="draft.id+'code'" [disabled]="isDraftLocked(draft)"></label>
-                <label>Tên nhóm<input [(ngModel)]="draft.groupName" (ngModelChange)="resetGroupReview(group)" [name]="draft.id+'name'" [disabled]="isDraftLocked(draft)"></label>
-                <label class="form-span">Mã môn (1–4), cách nhau bằng dấu phẩy<input [ngModel]="draft.subjectCodes.join(', ')" (ngModelChange)="updateDraftSubjects(draft, $event); resetGroupReview(group)" [name]="draft.id+'subjects'" [disabled]="isDraftLocked(draft)"></label></div>
-              <div class="actions draft-actions"><button class="button button--primary" type="button" *ngIf="draft.status==='DRAFT' && auth.user?.role==='ADMIN'" [disabled]="busy() || isDraftLocked(draft)" (click)="submitDraft(draft)">Lưu và gửi duyệt</button>
-                <button class="button button--quiet" type="button" *ngIf="auth.isSuperAdmin && draft.status==='SUBMITTED'" [disabled]="isDraftLocked(draft)" (click)="startRejectDraft(draft)">Từ chối</button>
-                <button class="button button--danger button--small" type="button" *ngIf="auth.isSuperAdmin" [disabled]="busy()" (click)="hardDeleteDraft(draft)">{{ draftDeleteConfirmationId()===draft.id ? 'Xác nhận xóa nháp' : 'Xóa nháp' }}</button>
-                <button class="button button--quiet button--small" type="button" *ngIf="draftDeleteConfirmationId()===draft.id" (click)="cancelHardDeleteDraft()">Hủy</button></div>
+              <div class="draft-heading">
+                <div><span class="status-badge status-badge--review">{{ statusLabel(draft.status) }}</span>
+                  <h4>{{ draft.groupCode }} · {{ draft.groupName }}</h4>
+                </div>
+                <span class="source-pages">Trang/ảnh nguồn: {{ draft.sourcePages.join(', ') || '—' }}</span>
+              </div>
+              <div class="form-grid draft-fields"><label>Mã nhóm<input [(ngModel)]="draft.groupCode"
+                    (ngModelChange)="resetGroupReview(group)" [name]="draft.id+'code'"
+                    [disabled]="isDraftLocked(draft)"></label>
+                <label>Tên nhóm<input [(ngModel)]="draft.groupName" (ngModelChange)="resetGroupReview(group)"
+                    [name]="draft.id+'name'" [disabled]="isDraftLocked(draft)"></label>
+                <label class="form-span">Mã môn (1–4), cách nhau bằng dấu phẩy<input
+                    [ngModel]="draft.subjectCodes.join(', ')"
+                    (ngModelChange)="updateDraftSubjects(draft, $event); resetGroupReview(group)"
+                    [name]="draft.id+'subjects'" [disabled]="isDraftLocked(draft)"></label>
+              </div>
+              <div class="actions draft-actions"><button class="button button--primary" type="button"
+                  *ngIf="draft.status==='DRAFT' && auth.user?.role==='ADMIN'"
+                  [disabled]="busy() || isDraftLocked(draft)" (click)="submitDraft(draft)">Lưu và gửi duyệt</button>
+                <button class="button button--quiet" type="button"
+                  *ngIf="auth.isSuperAdmin && draft.status==='SUBMITTED'" [disabled]="isDraftLocked(draft)"
+                  (click)="startRejectDraft(draft)">Từ chối</button>
+                <button class="button button--danger button--small" type="button" *ngIf="auth.isSuperAdmin"
+                  [disabled]="busy()" (click)="hardDeleteDraft(draft)">{{ draftDeleteConfirmationId()===draft.id ? 'Xác
+                  nhận xóa nháp' : 'Xóa nháp' }}</button>
+                <button class="button button--quiet button--small" type="button"
+                  *ngIf="draftDeleteConfirmationId()===draft.id" (click)="cancelHardDeleteDraft()">Hủy</button>
+              </div>
               <form class="reject-form" *ngIf="rejectingDraftId===draft.id" (ngSubmit)="rejectDraft(draft)">
-                <label>Lý do từ chối<textarea name="rejectNote" [(ngModel)]="rejectNote" rows="2" maxlength="500" placeholder="Ghi chú để người gửi biết nội dung cần chỉnh sửa"></textarea></label>
-                <div class="actions"><button class="button button--danger" type="submit" [disabled]="busy()">Xác nhận từ chối</button>
-                  <button class="button button--quiet" type="button" (click)="cancelRejectDraft()">Hủy</button></div></form>
+                <label>Lý do từ chối<textarea name="rejectNote" [(ngModel)]="rejectNote" rows="2" maxlength="500"
+                    placeholder="Ghi chú để người gửi biết nội dung cần chỉnh sửa"></textarea></label>
+                <div class="actions"><button class="button button--danger" type="submit" [disabled]="busy()">Xác nhận từ
+                    chối</button>
+                  <button class="button button--quiet" type="button" (click)="cancelRejectDraft()">Hủy</button>
+                </div>
+              </form>
             </article>
           </section>
-          <button class="button button--quiet load-more" *ngIf="group.hasNext" [disabled]="group.loading" (click)="loadGroupDrafts(group, group.cursor)">Tải thêm bản nháp</button>
+          <button class="button button--quiet load-more" *ngIf="group.hasNext" [disabled]="group.loading"
+            (click)="loadGroupDrafts(group, group.cursor)">Tải thêm bản nháp</button>
           <section class="review-publish-panel" *ngIf="auth.isSuperAdmin && group.loaded && group.drafts.length">
             <p *ngIf="group.hasNext">Tải hết các bản nháp của trường/năm học để có thể rà soát và công bố.</p>
-            <p>SUPER_ADMIN có thể công bố trực tiếp các bản nháp sau khi tải hết và xác nhận đã rà soát toàn bộ nhóm.</p>
-            <label><input type="checkbox" [(ngModel)]="group.reviewConfirmed" [name]="group.groupKey + group.academicYear + 'reviewed'"
-              [disabled]="busy() || group.hasNext || !allDraftsPublishable(group)"> Tôi đã đọc và rà soát tất cả bản nháp của trường trong năm học này.</label>
+            <p>SUPER_ADMIN có thể công bố trực tiếp các bản nháp sau khi tải hết và xác nhận đã rà soát toàn bộ nhóm.
+            </p>
+            <label><input type="checkbox" [(ngModel)]="group.reviewConfirmed"
+                [name]="group.groupKey + group.academicYear + 'reviewed'"
+                [disabled]="busy() || group.hasNext || !allDraftsPublishable(group)"> Tôi đã đọc và rà soát tất cả bản
+              nháp của trường trong năm học này.</label>
             <button class="button button--primary" type="button" [disabled]="busy() || !canPublishDraftGroup(group)"
               (click)="publishDraftGroup(group)">Công bố tất cả {{ group.drafts.length }} nhóm môn</button>
           </section>
         </div>
       </article>
-      <button class="button button--quiet load-more" *ngIf="draftGroupsHasNext()" [disabled]="loadingDraftGroups()" (click)="loadDraftGroups(draftGroupsCursor())">Tải thêm nhóm trường</button>
+      <button class="button button--quiet load-more" *ngIf="draftGroupsHasNext()" [disabled]="loadingDraftGroups()"
+        (click)="loadDraftGroups(draftGroupsCursor())">Tải thêm nhóm trường</button>
+    </section>
+  </section>
+
+  <section *ngIf="tab==='schools' && auth.isAdmin" role="tabpanel" aria-labelledby="tab-schools">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">DANH MỤC TRƯỜNG</p>
+        <h2>Trường THPT</h2>
+        <p>Quản lý mã trường, tên trường và tỉnh/thành. Mã gợi ý có thể chỉnh sửa.</p>
+      </div>
+    </div>
+    <section class="panel content-section">
+      <div class="panel-heading"><span class="icon-tile" aria-hidden="true">＋</span>
+        <div>
+          <h3>{{ editingManagedSchoolCode ? 'Cập nhật trường' : 'Tạo trường THPT' }}</h3>
+          <p *ngIf="!editingManagedSchoolCode">Nếu để trống mã trường, hệ thống sẽ tạo mã từ tên trường.</p>
+          <p *ngIf="editingManagedSchoolCode">Đổi mã trường sẽ giữ mã cũ trong lịch sử và đồng bộ lại graph.</p>
+        </div>
+      </div>
+      <form class="form-grid inline-form school-management-form" (ngSubmit)="saveManagedSchool(managedSchoolForm)"
+        #managedSchoolForm="ngForm">
+        <label>Mã trường<input name="managedSchoolCode" [(ngModel)]="managedSchoolCode" maxlength="30"
+            placeholder="Tự tạo nếu để trống"></label>
+        <label>Tên trường THPT<input name="managedSchoolName" [(ngModel)]="managedSchoolName"
+            (blur)="onManagedSchoolNameChanged()" placeholder="Trường THPT ..." required minlength="2"
+            maxlength="255"></label>
+        <label>Tỉnh/thành<select name="managedSchoolProvince" [(ngModel)]="managedSchoolProvinceCode"
+            (ngModelChange)="onManagedSchoolNameChanged()" required>
+            <option value="">Chọn tỉnh/thành</option>
+            <option *ngFor="let province of provinces()" [value]="province.code">{{ province.name }}</option>
+          </select></label>
+        <div class="form-actions"><button class="button button--primary" [disabled]="busy()">{{ editingManagedSchoolCode
+            ? 'Lưu thay đổi' : 'Tạo trường' }}</button>
+          <button class="button button--quiet" type="button" *ngIf="editingManagedSchoolCode" [disabled]="busy()"
+            (click)="cancelManagedSchoolEdit()">Hủy</button>
+        </div>
+      </form>
+    </section>
+    <section class="content-section">
+      <div class="section-heading section-heading--compact">
+        <div>
+          <h3>Danh sách trường</h3>
+          <p>Mã trường đã sử dụng vẫn được giữ trong lịch sử để tránh gán nhầm tài liệu cũ.</p>
+        </div>
+        <button class="button button--quiet" type="button" [disabled]="loadingManagedSchools()"
+          (click)="loadManagedSchools()">Làm mới</button>
+      </div>
+      <div class="panel table-panel">
+        <div class="loading-state" *ngIf="loadingManagedSchools()" role="status"><span class="spinner"></span>Đang tải
+          trường…</div>
+        <div class="error-state" *ngIf="managedSchoolsError()" role="alert"><span>{{ managedSchoolsError() }}</span>
+          <button class="button button--quiet" type="button" (click)="loadManagedSchools()">Thử tải lại</button>
+        </div>
+        <div class="empty-state"
+          *ngIf="!loadingManagedSchools() && !managedSchoolsError() && managedSchools().length===0">
+          <strong>Chưa có trường THPT</strong>
+          <p>Tạo trường đầu tiên để quản lý danh mục.</p>
+        </div>
+        <div class="table-wrap" *ngIf="managedSchools().length">
+          <table>
+            <thead>
+              <tr>
+                <th>Mã trường</th>
+                <th>Tên trường</th>
+                <th>Tỉnh/thành</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let school of managedSchools()">
+                <td><code>{{ school.code }}</code></td>
+                <td>{{ school.name }}</td>
+                <td>{{ school.location }}</td>
+                <td>
+                  <div class="actions" *ngIf="deleteSchoolConfirmationCode()!==school.code"><button
+                      class="button button--quiet button--small" type="button" [disabled]="busy()"
+                      (click)="editManagedSchool(school)">Sửa</button>
+                    <button class="button button--danger button--small" type="button" [disabled]="busy()"
+                      (click)="deleteManagedSchool(school)">Xóa mềm</button>
+                  </div>
+                  <div class="actions" *ngIf="deleteSchoolConfirmationCode()===school.code"><span
+                      class="confirm-copy">Xóa trường và nhóm môn liên quan?</span>
+                    <button class="button button--danger button--small" type="button" [disabled]="busy()"
+                      (click)="deleteManagedSchool(school)">Xác nhận</button>
+                    <button class="button button--quiet button--small" type="button"
+                      (click)="cancelDeleteManagedSchool()">Hủy</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <button class="button button--quiet load-more" *ngIf="managedSchoolsHasNext()"
+        [disabled]="loadingManagedSchools()" (click)="loadManagedSchools(managedSchoolsCursor())">Tải thêm
+        trường</button>
+    </section>
+
+    <section class="content-section" *ngIf="auth.isSuperAdmin" aria-labelledby="deleted-schools-title">
+      <div class="section-heading section-heading--compact">
+        <div>
+          <h3 id="deleted-schools-title">Trường đã xóa mềm</h3>
+          <p>Khôi phục trường sẽ phục hồi nhóm môn và đồng bộ graph. Tài liệu liên quan cần được khôi phục riêng.</p>
+        </div>
+        <button class="button button--quiet" type="button" [disabled]="loadingDeletedManagedSchools()"
+          (click)="loadDeletedManagedSchools()">Làm mới</button>
+      </div>
+      <div class="panel table-panel">
+        <div class="loading-state" *ngIf="loadingDeletedManagedSchools()" role="status"><span class="spinner"></span>Đang tải
+          trường đã xóa…</div>
+        <div class="error-state" *ngIf="deletedManagedSchoolsError()" role="alert">
+          <span>{{ deletedManagedSchoolsError() }}</span>
+          <button class="button button--quiet" type="button" (click)="loadDeletedManagedSchools()">Thử tải lại</button>
+        </div>
+        <div class="empty-state"
+          *ngIf="!loadingDeletedManagedSchools() && !deletedManagedSchoolsError() && deletedManagedSchools().length===0">
+          <strong>Không có trường đã xóa mềm.</strong>
+        </div>
+        <div class="table-wrap" *ngIf="deletedManagedSchools().length">
+          <table>
+            <thead><tr><th>Mã trường</th><th>Tên trường</th><th>Tỉnh/thành</th><th>Neo4j</th><th>Thao tác</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let school of deletedManagedSchools()">
+                <td><code>{{ school.code }}</code></td>
+                <td>{{ school.name }}</td>
+                <td>{{ school.location }}</td>
+                <td><span class="status-badge">{{ graphSyncLabel(school.graphSyncStatus) }}</span></td>
+                <td><button class="button button--primary button--small" type="button"
+                    [disabled]="busy() || isSchoolGraphSyncPending(school)"
+                    (click)="restoreManagedSchool(school)">Khôi phục trường</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <button class="button button--quiet load-more" *ngIf="deletedManagedSchoolsHasNext()"
+        [disabled]="loadingDeletedManagedSchools()"
+        (click)="loadDeletedManagedSchools(deletedManagedSchoolsCursor())">Tải thêm trường</button>
     </section>
   </section>
 
   <section *ngIf="tab==='users' && auth.isSuperAdmin" role="tabpanel" aria-labelledby="tab-users">
-    <div class="section-heading"><div><p class="eyebrow">PHÂN QUYỀN TRUY CẬP</p><h2>Người dùng</h2><p>Tạo tài khoản và quản lý vai trò, trạng thái hoạt động.</p></div></div>
-    <section class="panel content-section"><div class="panel-heading"><span class="icon-tile" aria-hidden="true">＋</span><div><h3>Tạo người dùng</h3><p>Tài khoản mới mặc định chưa được phép truy cập cho đến khi kích hoạt.</p></div></div>
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">PHÂN QUYỀN TRUY CẬP</p>
+        <h2>Người dùng</h2>
+        <p>Tạo tài khoản và quản lý vai trò, trạng thái hoạt động.</p>
+      </div>
+    </div>
+    <section class="panel content-section">
+      <div class="panel-heading"><span class="icon-tile" aria-hidden="true">＋</span>
+        <div>
+          <h3>Tạo người dùng</h3>
+          <p>Tài khoản mới mặc định chưa được phép truy cập cho đến khi kích hoạt.</p>
+        </div>
+      </div>
       <form class="form-grid inline-form user-create-form" (ngSubmit)="createUser(userForm)" #userForm="ngForm">
-        <label>Tên đăng nhập<input name="newUsername" [(ngModel)]="newUsername" placeholder="Tên đăng nhập" required minlength="2" maxlength="80"
-          #newUsernameModel="ngModel" [attr.aria-invalid]="newUsernameModel.invalid && newUsernameModel.touched" aria-label="Tên đăng nhập mới"></label>
-        <label>Mật khẩu<div class="user-password-field"><input name="newPassword" [(ngModel)]="newPassword" #newPasswordModel="ngModel" type="password" minlength="6" placeholder="Ít nhất 6 ký tự" required
-          [attr.aria-invalid]="newPasswordModel.invalid && newPasswordModel.touched" [attr.aria-describedby]="newPasswordModel.invalid && newPasswordModel.touched ? 'new-password-error' : null">
-          <small class="field-error" [class.field-error--hidden]="!newPasswordModel.invalid || !newPasswordModel.touched"
-            [attr.aria-hidden]="newPasswordModel.invalid && newPasswordModel.touched ? null : 'true'" id="new-password-error">{{ newPasswordModel.errors?.['required'] ? 'Vui lòng nhập mật khẩu.' : 'Mật khẩu cần ít nhất 6 ký tự.' }}</small></div></label>
-        <label>Vai trò<select name="newRole" [(ngModel)]="newRole"><option value="USER">Người dùng</option><option value="ADMIN">Quản trị viên</option><option value="SUPER_ADMIN">Quản trị cấp cao</option></select></label>
-        <div class="form-actions"><button class="button button--primary" [disabled]="busy()">Tạo tài khoản</button></div>
-      </form></section>
-    <section class="content-section"><div class="section-heading section-heading--compact"><div><h3>Danh sách tài khoản</h3><p>Thay đổi vai trò sẽ thu hồi các phiên đăng nhập hiện tại.</p></div></div>
-      <div class="panel table-panel"><div class="loading-state" *ngIf="loadingUsers()" role="status"><span class="spinner"></span>Đang tải người dùng…</div>
-        <div class="error-state" *ngIf="usersError()" role="alert"><span>{{ usersError() }}</span><button class="button button--quiet" (click)="loadUsers()">Thử tải lại</button></div>
-        <div class="empty-state" *ngIf="!loadingUsers() && !usersError() && users().length===0"><strong>Chưa có tài khoản</strong><p>Tạo tài khoản để bắt đầu quản lý quyền truy cập.</p></div>
-        <div class="table-wrap" *ngIf="users().length"><table><thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr></thead><tbody>
-          <tr *ngFor="let user of users()"><td><strong>{{ user.username }}</strong></td><td><select [(ngModel)]="user.role" [name]="user.id+'role'"><option value="USER">Người dùng</option><option value="ADMIN">Quản trị viên</option><option value="SUPER_ADMIN">Quản trị cấp cao</option></select></td>
-            <td><label class="user-status-toggle"><input type="checkbox" [(ngModel)]="user.active" [name]="user.id+'active'" [attr.aria-label]="'Trạng thái tài khoản ' + user.username"><span class="status-switch" aria-hidden="true"></span><span>{{ user.active ? 'Hoạt động' : 'Đã khóa' }}</span></label></td>
-            <td><button class="button button--quiet button--small" [disabled]="busy()" (click)="saveUser(user)">Lưu thay đổi</button></td></tr></tbody></table></div></div>
-      <button class="button button--quiet load-more" *ngIf="usersHasNext()" [disabled]="loadingUsers()" (click)="loadUsers(usersCursor())">Tải thêm người dùng</button></section>
+        <label>Tên đăng nhập<input name="newUsername" [(ngModel)]="newUsername" placeholder="Tên đăng nhập" required
+            minlength="2" maxlength="80" #newUsernameModel="ngModel"
+            [attr.aria-invalid]="newUsernameModel.invalid && newUsernameModel.touched"
+            aria-label="Tên đăng nhập mới"></label>
+        <label>Mật khẩu<div class="user-password-field"><input name="newPassword" [(ngModel)]="newPassword"
+              #newPasswordModel="ngModel" type="password" minlength="6" placeholder="Ít nhất 6 ký tự" required
+              [attr.aria-invalid]="newPasswordModel.invalid && newPasswordModel.touched"
+              [attr.aria-describedby]="newPasswordModel.invalid && newPasswordModel.touched ? 'new-password-error' : null">
+            <small class="field-error"
+              [class.field-error--hidden]="!newPasswordModel.invalid || !newPasswordModel.touched"
+              [attr.aria-hidden]="newPasswordModel.invalid && newPasswordModel.touched ? null : 'true'"
+              id="new-password-error">{{ newPasswordModel.errors?.['required'] ? 'Vui lòng nhập mật khẩu.' : 'Mật khẩu
+              cần ít nhất 6 ký tự.' }}</small>
+          </div></label>
+        <label>Vai trò<select name="newRole" [(ngModel)]="newRole">
+            <option value="USER">Người dùng</option>
+            <option value="ADMIN">Quản trị viên</option>
+            <option value="SUPER_ADMIN">Quản trị cấp cao</option>
+          </select></label>
+        <div class="form-actions"><button class="button button--primary" [disabled]="busy()">Tạo tài khoản</button>
+        </div>
+      </form>
+    </section>
+    <section class="content-section">
+      <div class="section-heading section-heading--compact">
+        <div>
+          <h3>Danh sách tài khoản</h3>
+          <p>Thay đổi vai trò sẽ thu hồi các phiên đăng nhập hiện tại.</p>
+        </div>
+      </div>
+      <div class="panel table-panel">
+        <div class="loading-state" *ngIf="loadingUsers()" role="status"><span class="spinner"></span>Đang tải người
+          dùng…</div>
+        <div class="error-state" *ngIf="usersError()" role="alert"><span>{{ usersError() }}</span><button
+            class="button button--quiet" (click)="loadUsers()">Thử tải lại</button></div>
+        <div class="empty-state" *ngIf="!loadingUsers() && !usersError() && users().length===0"><strong>Chưa có tài
+            khoản</strong>
+          <p>Tạo tài khoản để bắt đầu quản lý quyền truy cập.</p>
+        </div>
+        <div class="table-wrap" *ngIf="users().length">
+          <table>
+            <thead>
+              <tr>
+                <th>Tài khoản</th>
+                <th>Vai trò</th>
+                <th>Trạng thái</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of users()">
+                <td><strong>{{ user.username }}</strong></td>
+                <td><select [(ngModel)]="user.role" [name]="user.id+'role'">
+                    <option value="USER">Người dùng</option>
+                    <option value="ADMIN">Quản trị viên</option>
+                    <option value="SUPER_ADMIN">Quản trị cấp cao</option>
+                  </select></td>
+                <td><label class="user-status-toggle"><input type="checkbox" [(ngModel)]="user.active"
+                      [name]="user.id+'active'" [attr.aria-label]="'Trạng thái tài khoản ' + user.username"><span
+                      class="status-switch" aria-hidden="true"></span><span>{{ user.active ? 'Hoạt động' : 'Đã khóa'
+                      }}</span></label></td>
+                <td><button class="button button--quiet button--small" [disabled]="busy()" (click)="saveUser(user)">Lưu
+                    thay đổi</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <button class="button button--quiet load-more" *ngIf="usersHasNext()" [disabled]="loadingUsers()"
+        (click)="loadUsers(usersCursor())">Tải thêm người dùng</button>
+    </section>
   </section>
 
   <section *ngIf="tab==='combinations' && auth.isSuperAdmin" role="tabpanel" aria-labelledby="tab-combinations">
-    <div class="section-heading"><div><p class="eyebrow">DANH MỤC TUYỂN SINH</p><h2>Tổ hợp xét tuyển</h2><p>Quản lý tổ hợp chuẩn dùng chung trong dữ liệu tuyển sinh.</p></div></div>
-    <section class="panel content-section"><div class="panel-heading"><span class="icon-tile" aria-hidden="true">＋</span><div><h3>Tạo tổ hợp</h3><p>Nhập mã môn chuẩn, phân tách bằng dấu phẩy.</p></div></div>
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">DANH MỤC TUYỂN SINH</p>
+        <h2>Tổ hợp xét tuyển</h2>
+        <p>Quản lý tổ hợp chuẩn dùng chung trong dữ liệu tuyển sinh.</p>
+      </div>
+    </div>
+    <section class="panel content-section">
+      <div class="panel-heading"><span class="icon-tile" aria-hidden="true">＋</span>
+        <div>
+          <h3>Tạo tổ hợp</h3>
+          <p>Nhập mã môn chuẩn, phân tách bằng dấu phẩy.</p>
+        </div>
+      </div>
       <form class="form-grid inline-form" (ngSubmit)="createCombination(combinationForm)" #combinationForm="ngForm">
-        <label>Tên hiển thị<input name="combDisplay" [(ngModel)]="combinationDisplay" placeholder="Ví dụ: Toán, Ngữ văn, Vật lý" required></label>
-        <label>Mã môn<input name="combSubjects" [(ngModel)]="combinationSubjects" placeholder="MATH, LITERATURE, PHYSICS" required></label>
+        <label>Tên hiển thị<input name="combDisplay" [(ngModel)]="combinationDisplay"
+            placeholder="Ví dụ: Toán, Ngữ văn, Vật lý" required></label>
+        <label>Mã môn<input name="combSubjects" [(ngModel)]="combinationSubjects"
+            placeholder="MATH, LITERATURE, PHYSICS" required></label>
         <div class="form-actions"><button class="button button--primary" [disabled]="busy()">Tạo tổ hợp</button></div>
-      </form></section>
-    <section class="content-section"><div class="section-heading section-heading--compact"><div><h3>Danh sách tổ hợp</h3><p>Tổ hợp lưu trữ vẫn giữ các liên kết tuyển sinh hiện có.</p></div></div>
-      <div class="panel table-panel"><div class="loading-state" *ngIf="loadingCombinations()" role="status"><span class="spinner"></span>Đang tải tổ hợp…</div>
-        <div class="error-state" *ngIf="combinationsError()" role="alert"><span>{{ combinationsError() }}</span><button class="button button--quiet" (click)="loadCombinations()">Thử tải lại</button></div>
-        <div class="empty-state" *ngIf="!loadingCombinations() && !combinationsError() && combinations().length===0"><strong>Chưa có tổ hợp</strong><p>Thêm tổ hợp chuẩn đầu tiên để quản lý tại đây.</p></div>
-        <div class="table-wrap" *ngIf="combinations().length"><table><thead><tr><th>Mã chuẩn</th><th>Tên hiển thị</th><th>Số môn</th><th>Trạng thái</th><th></th></tr></thead><tbody>
-          <tr *ngFor="let combination of combinations()"><td><code>{{ combination.id }}</code></td><td><input aria-label="Tên tổ hợp" [(ngModel)]="combination.display" [name]="combination.id+'display'"></td><td>{{ combination.componentCount }}</td>
-            <td><span class="status-badge" [class.status-badge--success]="combination.active" [class.status-badge--muted]="!combination.active">{{ combination.active ? 'Đang hoạt động' : 'Đã lưu trữ' }}</span></td>
-            <td><div class="actions"><button class="button button--quiet button--small" [disabled]="busy()" (click)="saveCombination(combination)">Lưu tên</button>
-              <button class="button button--danger button--small" *ngIf="combination.active && archiveConfirmationId()!==combination.id" [disabled]="busy()" (click)="archiveCombination(combination)">Lưu trữ</button>
-              <ng-container *ngIf="archiveConfirmationId()===combination.id"><span class="confirm-copy">Xác nhận lưu trữ?</span>
-                <button class="button button--danger button--small" [disabled]="busy()" (click)="archiveCombination(combination)">Xác nhận</button>
-                <button class="button button--quiet button--small" type="button" (click)="cancelArchiveCombination()">Hủy</button></ng-container></div></td></tr></tbody></table></div></div>
-      <button class="button button--quiet load-more" *ngIf="combinationsHasNext()" [disabled]="loadingCombinations()" (click)="loadCombinations(combinationsCursor())">Tải thêm tổ hợp</button></section>
+      </form>
+    </section>
+    <section class="content-section">
+      <div class="section-heading section-heading--compact">
+        <div>
+          <h3>Danh sách tổ hợp</h3>
+          <p>Tổ hợp lưu trữ vẫn giữ các liên kết tuyển sinh hiện có.</p>
+        </div>
+      </div>
+      <div class="panel table-panel">
+        <div class="loading-state" *ngIf="loadingCombinations()" role="status"><span class="spinner"></span>Đang tải tổ
+          hợp…</div>
+        <div class="error-state" *ngIf="combinationsError()" role="alert"><span>{{ combinationsError() }}</span><button
+            class="button button--quiet" (click)="loadCombinations()">Thử tải lại</button></div>
+        <div class="empty-state" *ngIf="!loadingCombinations() && !combinationsError() && combinations().length===0">
+          <strong>Chưa có tổ hợp</strong>
+          <p>Thêm tổ hợp chuẩn đầu tiên để quản lý tại đây.</p>
+        </div>
+        <div class="table-wrap" *ngIf="combinations().length">
+          <table>
+            <thead>
+              <tr>
+                <th>Mã chuẩn</th>
+                <th>Tên hiển thị</th>
+                <th>Số môn</th>
+                <th>Trạng thái</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let combination of combinations()">
+                <td><code>{{ combination.id }}</code></td>
+                <td><input aria-label="Tên tổ hợp" [(ngModel)]="combination.display" [name]="combination.id+'display'">
+                </td>
+                <td>{{ combination.componentCount }}</td>
+                <td><span class="status-badge" [class.status-badge--success]="combination.active"
+                    [class.status-badge--muted]="!combination.active">{{ combination.active ? 'Đang hoạt động' : 'Đã lưu
+                    trữ' }}</span></td>
+                <td>
+                  <div class="actions"><button class="button button--quiet button--small" [disabled]="busy()"
+                      (click)="saveCombination(combination)">Lưu tên</button>
+                    <button class="button button--danger button--small"
+                      *ngIf="combination.active && archiveConfirmationId()!==combination.id" [disabled]="busy()"
+                      (click)="archiveCombination(combination)">Lưu trữ</button>
+                    <ng-container *ngIf="archiveConfirmationId()===combination.id"><span class="confirm-copy">Xác nhận
+                        lưu trữ?</span>
+                      <button class="button button--danger button--small" [disabled]="busy()"
+                        (click)="archiveCombination(combination)">Xác nhận</button>
+                      <button class="button button--quiet button--small" type="button"
+                        (click)="cancelArchiveCombination()">Hủy</button></ng-container>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <button class="button button--quiet load-more" *ngIf="combinationsHasNext()" [disabled]="loadingCombinations()"
+        (click)="loadCombinations(combinationsCursor())">Tải thêm tổ hợp</button>
+    </section>
   </section>
 
-  <section *ngIf="tab==='llm' && auth.isSuperAdmin" role="tabpanel" aria-labelledby="tab-llm">
-    <div class="section-heading"><div><p class="eyebrow">TÍCH HỢP DỊCH VỤ</p><h2>Cấu hình AI</h2><p>Trích xuất tài liệu dùng cấu hình riêng. Phân tích yêu cầu và tạo câu trả lời dùng chung cấu hình Trò chuyện.</p></div></div>
-    <p class="security-note"><span aria-hidden="true">ⓘ</span> Giá trị API key luôn được che. Key nhập mới được mã hóa trong cơ sở dữ liệu; để trống key khi lưu sẽ chuyển sang dùng key từ môi trường.</p>
-    <div class="loading-state" *ngIf="loadingLlm()" role="status"><span class="spinner"></span>Đang tải cấu hình…</div>
-    <div class="error-state" *ngIf="llmError()" role="alert"><span>{{ llmError() }}</span><button class="button button--quiet" (click)="loadLlm()">Thử tải lại</button></div>
-    <article class="panel content-section llm-config-card" *ngFor="let item of llmConfigurations()">
-      <div class="section-heading"><div><p class="eyebrow">CẤU HÌNH DỊCH VỤ</p><h3>{{ purposeLabel(item.purpose) }}</h3>
-        <p *ngIf="item.purpose==='CHAT'">Dùng cho bước INTENT và bước sinh câu trả lời.</p></div>
-        <button class="button button--quiet" type="button" *ngIf="editingLlmPurpose()!==item.purpose" (click)="configureLlm(item)">Configure</button>
-      </div>
-      <div class="form-grid llm-readonly" *ngIf="editingLlmPurpose()!==item.purpose">
-        <label>Endpoint<input [value]="item.endpoint || 'Chưa cấu hình'" readonly></label>
-        <label>Tên model<input [value]="item.model || 'Chưa cấu hình'" readonly></label>
-        <label>API key<input [value]="item.keyConfigured ? '••••••••••••••••' : 'Chưa cấu hình'" readonly></label>
-        <div><span class="cell-subtitle">Key source</span><strong>{{ item.keySource==='ADMIN' ? 'Admin' : 'Environment' }}</strong>
-          <span class="cell-subtitle" *ngIf="item.keySource==='ENVIRONMENT' && !item.environmentKeyConfigured">Không tìm thấy key trong biến môi trường.</span></div>
-        <div><span class="cell-subtitle">Trạng thái</span><strong>{{ item.active ? 'Đang sử dụng' : 'Không hoạt động' }}</strong></div>
-      </div>
-      <form class="form-grid llm-editor" *ngIf="editingLlmPurpose()===item.purpose" (ngSubmit)="saveLlm(llmForm)" #llmForm="ngForm">
-        <label>Endpoint<input name="endpoint" [(ngModel)]="llmEndpoint" type="url" placeholder="https://api.example.com" required></label>
-        <label>Tên model<input name="model" [(ngModel)]="llmModel" placeholder="Tên model" required></label>
-        <label class="form-span">API key<input name="key" [(ngModel)]="llmKey" type="password" autocomplete="new-password" placeholder="Để trống để dùng key từ biến môi trường"></label>
-        <label class="toggle-label form-span"><input name="active" [(ngModel)]="llmActive" type="checkbox"><span>Dùng cấu hình này</span></label>
-        <div class="form-actions form-span"><button class="button button--primary" [disabled]="busy()">Lưu cấu hình</button>
-          <button class="button button--quiet" type="button" [disabled]="busy()" (click)="cancelLlmConfiguration()">Hủy</button></div>
-      </form>
-    </article>
-  </section>
 </main>

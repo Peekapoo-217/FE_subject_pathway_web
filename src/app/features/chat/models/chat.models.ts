@@ -24,11 +24,6 @@ export interface ChatRequest {
   user_message: string;
   context: ChatHistoryItem[];
   chat_history?: ChatHistoryItem[];
-  override_config?: {
-    api_key?: string;
-    model?: string;
-    base_url?: string;
-  };
 }
 
 export interface ChatResponse {
