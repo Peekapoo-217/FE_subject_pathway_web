@@ -443,10 +443,7 @@ export class AdminDashboardComponent implements OnInit {
     const message = this.auth.isSuperAdmin
       ? 'Đã xóa mềm tài liệu. Các nhóm môn vẫn được công bố.'
       : 'Đã gửi yêu cầu xóa tài liệu để SUPER_ADMIN duyệt.';
-    this.run(this.api.deleteDocument(document.id), message, () => {
-      this.loadDocuments();
-      this.loadDraftGroups();
-    });
+    this.run(this.api.deleteDocument(document.id), message, () => this.refreshDocumentsAfterSoftDelete());
   }
 
   editDocument(document: AdminDocument): void {
@@ -669,9 +666,14 @@ export class AdminDashboardComponent implements OnInit {
 
   approveDelete(document: AdminDocument): void {
     this.run(this.api.approveDocumentDelete(document.id), 'Đã duyệt xóa mềm tài liệu và các bản nháp chưa công bố.', () => {
-      this.loadDocuments();
-      this.loadDraftGroups();
+      this.refreshDocumentsAfterSoftDelete();
     });
+  }
+
+  private refreshDocumentsAfterSoftDelete(): void {
+    this.loadDocuments();
+    this.loadDraftGroups();
+    if (this.auth.isSuperAdmin) this.loadDeletedDocuments();
   }
 
   hardDeleteDraft(draft: SubjectGroupDraft): void {

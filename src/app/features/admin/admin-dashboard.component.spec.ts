@@ -1,5 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -27,39 +26,55 @@ describe('AdminDashboardComponent', () => {
       error: { success: false, message: 'Không được phép xem tài liệu.' }
     })));
     api.deletedDocuments.and.returnValue(of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } }));
-    api.unpublishDocument.and.returnValue(of({ success: true, data: {
-      documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'PENDING', graphSyncJobId: 'job-1'
-    } }));
-    api.restoreDocument.and.returnValue(of({ success: true, data: {
-      documentId: 'deleted-1', graphPublicationStatus: 'PUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: null
-    } }));
-    api.documentGraphSyncStatus.and.returnValue(of({ success: true, data: {
-      documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: 'job-1'
-    } }));
+    api.unpublishDocument.and.returnValue(of({
+      success: true, data: {
+        documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'PENDING', graphSyncJobId: 'job-1'
+      }
+    }));
+    api.restoreDocument.and.returnValue(of({
+      success: true, data: {
+        documentId: 'deleted-1', graphPublicationStatus: 'PUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: null
+      }
+    }));
+    api.documentGraphSyncStatus.and.returnValue(of({
+      success: true, data: {
+        documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: 'job-1'
+      }
+    }));
     api.draftGroups.and.returnValue(of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } }));
     api.drafts.and.returnValue(of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } }));
     api.users.and.returnValue(of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } }));
     api.adminHighSchools.and.returnValue(of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } }));
     api.adminDeletedHighSchools.and.returnValue(of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } }));
-    api.restoreHighSchool.and.returnValue(of({ success: true, data: {
-      schoolCode: 'TDT', graphSyncStatus: 'SYNCED', graphSyncJobId: null
-    } }));
-    api.highSchoolGraphSyncStatus.and.returnValue(of({ success: true, data: {
-      schoolCode: 'TDT', graphSyncStatus: 'SYNCED', graphSyncJobId: 'school-job'
-    } }));
-    api.createHighSchool.and.returnValue(of({ success: true, data: {
-      code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: ''
-    } }));
-    api.updateHighSchool.and.returnValue(of({ success: true, data: {
-      code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: ''
-    } }));
+    api.restoreHighSchool.and.returnValue(of({
+      success: true, data: {
+        schoolCode: 'TDT', graphSyncStatus: 'SYNCED', graphSyncJobId: null
+      }
+    }));
+    api.highSchoolGraphSyncStatus.and.returnValue(of({
+      success: true, data: {
+        schoolCode: 'TDT', graphSyncStatus: 'SYNCED', graphSyncJobId: 'school-job'
+      }
+    }));
+    api.createHighSchool.and.returnValue(of({
+      success: true, data: {
+        code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: ''
+      }
+    }));
+    api.updateHighSchool.and.returnValue(of({
+      success: true, data: {
+        code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: ''
+      }
+    }));
     api.deleteHighSchool.and.returnValue(of({ success: true, data: undefined }));
     api.highSchools.and.returnValue(of({ success: true, data: [{ code: 'SCHOOL', name: 'Trường A' }] }));
     api.provinces.and.returnValue(of({ success: true, data: [{ code: '01', name: 'Thành phố Hà Nội' }] }));
-    api.suggestSchoolCode.and.returnValue(of({ success: true, data: {
-      suggestedCode: 'TDT', available: true, canReuseExistingSchool: false,
-      existingSchoolCode: null, existingSchoolName: null, existingSchoolLocation: null
-    } }));
+    api.suggestSchoolCode.and.returnValue(of({
+      success: true, data: {
+        suggestedCode: 'TDT', available: true, canReuseExistingSchool: false,
+        existingSchoolCode: null, existingSchoolName: null, existingSchoolLocation: null
+      }
+    }));
 
     await TestBed.configureTestingModule({
       imports: [AdminDashboardComponent],
@@ -94,10 +109,12 @@ describe('AdminDashboardComponent', () => {
   });
 
   it('shows the high-school management tab to admins and loads it on selection', async () => {
-    api.adminHighSchools.and.returnValue(of({ success: true, data: {
-      items: [{ code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: '' }],
-      hasNext: false, nextCursor: ''
-    } }));
+    api.adminHighSchools.and.returnValue(of({
+      success: true, data: {
+        items: [{ code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: '' }],
+        hasNext: false, nextCursor: ''
+      }
+    }));
     fixture.detectChanges();
     const tab = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('#tab-schools');
 
@@ -111,11 +128,15 @@ describe('AdminDashboardComponent', () => {
   });
 
   it('shows soft-deleted schools to SUPER_ADMIN and restores the selected school', async () => {
-    api.adminDeletedHighSchools.and.returnValue(of({ success: true, data: {
-      items: [{ code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk',
-        deletedAt: '2026-10-16T00:00:00Z', graphSyncStatus: 'SYNCED', graphSyncJobId: null }],
-      hasNext: false, nextCursor: ''
-    } }));
+    api.adminDeletedHighSchools.and.returnValue(of({
+      success: true, data: {
+        items: [{
+          code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk',
+          deletedAt: '2026-10-16T00:00:00Z', graphSyncStatus: 'SYNCED', graphSyncJobId: null
+        }],
+        hasNext: false, nextCursor: ''
+      }
+    }));
     (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('#tab-schools')?.click();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -132,10 +153,12 @@ describe('AdminDashboardComponent', () => {
   });
 
   it('requires a second click before soft deleting a high school', async () => {
-    api.adminHighSchools.and.returnValue(of({ success: true, data: {
-      items: [{ code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: '' }],
-      hasNext: false, nextCursor: ''
-    } }));
+    api.adminHighSchools.and.returnValue(of({
+      success: true, data: {
+        items: [{ code: 'TDT', name: 'Trường THPT Tôn Đức Thắng', location: 'Tỉnh Đắk Lắk', createdAt: '', updatedAt: '' }],
+        hasNext: false, nextCursor: ''
+      }
+    }));
     (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('#tab-schools')?.click();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -208,10 +231,12 @@ describe('AdminDashboardComponent', () => {
   });
 
   it('edits document metadata through the page form', async () => {
-    api.documents.and.returnValue(of({ success: true, data: {
-      items: [{ id: 'doc-1', title: 'Phương án môn học', academicYear: '2026-2027', status: 'UPLOADED', schoolName: 'Trường A', schoolCode: 'SCHOOL', filename: 'plan.pdf', errorCode: null, graphSyncStatus: null }],
-      hasNext: false, nextCursor: ''
-    } }));
+    api.documents.and.returnValue(of({
+      success: true, data: {
+        items: [{ id: 'doc-1', title: 'Phương án môn học', academicYear: '2026-2027', status: 'UPLOADED', schoolName: 'Trường A', schoolCode: 'SCHOOL', filename: 'plan.pdf', errorCode: null, graphSyncStatus: null }],
+        hasNext: false, nextCursor: ''
+      }
+    }));
     api.updateDocument.and.returnValue(of({ success: true, data: undefined }));
     fixture.componentInstance.loadDocuments();
     await fixture.whenStable();
@@ -234,10 +259,12 @@ describe('AdminDashboardComponent', () => {
   });
 
   it('asks for confirmation before archiving a combination', async () => {
-    api.combinations.and.returnValue(of({ success: true, data: {
-      items: [{ id: 'MATH_PHYSICS', display: 'Toán, Vật lý', componentCount: 2, active: true }],
-      hasNext: false, nextCursor: ''
-    } }));
+    api.combinations.and.returnValue(of({
+      success: true, data: {
+        items: [{ id: 'MATH_PHYSICS', display: 'Toán, Vật lý', componentCount: 2, active: true }],
+        hasNext: false, nextCursor: ''
+      }
+    }));
     api.archiveCombination.and.returnValue(of({ success: true, data: undefined }));
     const tab = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('#tab-combinations');
     if (!tab) throw new Error('Combination tab was not rendered');
@@ -261,11 +288,15 @@ describe('AdminDashboardComponent', () => {
   });
 
   it('shows a safe image extraction error and retries the failed job', async () => {
-    api.documents.and.returnValue(of({ success: true, data: {
-      items: [{ id: 'doc-1', title: 'Nhóm môn', academicYear: '2026-2027', status: 'FAILED',
-        schoolName: 'Trường A', filename: 'groups.png', errorCode: 'MODEL_IMAGE_UNSUPPORTED', graphSyncStatus: null }],
-      hasNext: false, nextCursor: ''
-    } }));
+    api.documents.and.returnValue(of({
+      success: true, data: {
+        items: [{
+          id: 'doc-1', title: 'Nhóm môn', academicYear: '2026-2027', status: 'FAILED',
+          schoolName: 'Trường A', filename: 'groups.png', errorCode: 'MODEL_IMAGE_UNSUPPORTED', graphSyncStatus: null
+        }],
+        hasNext: false, nextCursor: ''
+      }
+    }));
     api.retryDocumentExtraction.and.returnValue(of({ success: true, data: undefined }));
     fixture.componentInstance.loadDocuments();
     await fixture.whenStable();
@@ -295,14 +326,26 @@ describe('AdminDashboardComponent', () => {
   });
 
   it('shows drafts under a school and academic year and loads their source document on expand', async () => {
-    api.draftGroups.and.returnValue(of({ success: true, data: { items: [{ groupKey: 'S:school-a', schoolName: 'Trường A',
-      schoolCode: 'school-a', location: 'Hà Nội', academicYear: '2026-2027', draftCount: 1, sourceDocumentCount: 1 }],
-      hasNext: false, nextCursor: '' } }));
-    api.drafts.and.returnValue(of({ success: true, data: { items: [{ id: 'draft-1', documentId: 'doc-1', documentVersionId: 'version-1', documentVersionNumber: 1,
-      documentTitle: 'Phương án nhóm môn', documentFilename: 'groups.pdf', schoolName: 'Trường A', schoolCode: 'school-a',
-      academicYear: '2026-2027', documentStatus: 'DRAFT_READY', groupCode: 'A01', groupName: 'Nhóm A01',
-      subjectCodes: ['MATH', 'LITERATURE', 'PHYSICS', 'CHEMISTRY'], sourcePages: [2], status: 'DRAFT',
-      confidence: 0.9, createdAt: '2026-10-14T00:00:00Z' }], hasNext: false, nextCursor: '' } }));
+    api.draftGroups.and.returnValue(of({
+      success: true, data: {
+        items: [{
+          groupKey: 'S:school-a', schoolName: 'Trường A',
+          schoolCode: 'school-a', location: 'Hà Nội', academicYear: '2026-2027', draftCount: 1, sourceDocumentCount: 1
+        }],
+        hasNext: false, nextCursor: ''
+      }
+    }));
+    api.drafts.and.returnValue(of({
+      success: true, data: {
+        items: [{
+          id: 'draft-1', documentId: 'doc-1', documentVersionId: 'version-1', documentVersionNumber: 1,
+          documentTitle: 'Phương án nhóm môn', documentFilename: 'groups.pdf', schoolName: 'Trường A', schoolCode: 'school-a',
+          academicYear: '2026-2027', documentStatus: 'DRAFT_READY', groupCode: 'A01', groupName: 'Nhóm A01',
+          subjectCodes: ['MATH', 'LITERATURE', 'PHYSICS', 'CHEMISTRY'], sourcePages: [2], status: 'DRAFT',
+          confidence: 0.9, createdAt: '2026-10-14T00:00:00Z'
+        }], hasNext: false, nextCursor: ''
+      }
+    }));
     fixture.componentInstance.loadDraftGroups();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -321,14 +364,27 @@ describe('AdminDashboardComponent', () => {
     expect(root.textContent).toContain('Nhóm A01');
   });
 
-  it('uses direct soft-delete action for SUPER_ADMIN and removes add-version UI', async () => {
-    api.documents.and.returnValue(of({ success: true, data: { items: [{ id: 'doc-1', title: 'Nhóm môn',
-      academicYear: '2026-2027', status: 'UPLOADED', schoolName: 'Trường A', filename: 'groups.pdf', errorCode: null, graphSyncStatus: null }],
-      hasNext: false, nextCursor: '' } }));
+  it('refreshes active and soft-deleted document lists after SUPER_ADMIN soft-deletes a document', async () => {
+    const document = {
+      id: 'doc-1', title: 'Nhóm môn', academicYear: '2026-2027', status: 'UPLOADED',
+      schoolName: 'Trường A', filename: 'groups.pdf', errorCode: null, graphSyncStatus: null
+    };
+    api.documents.and.returnValues(
+      of({ success: true, data: { items: [document], hasNext: false, nextCursor: '' } }),
+      of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } })
+    );
     api.deleteDocument.and.returnValue(of({ success: true, data: undefined }));
+    api.deletedDocuments.and.returnValue(of({
+      success: true, data: {
+        items: [{ ...document, status: 'DELETED' }],
+        hasNext: false, nextCursor: ''
+      }
+    }));
     fixture.componentInstance.loadDocuments();
     await fixture.whenStable();
     fixture.detectChanges();
+    const activeDocumentCallsBeforeDelete = api.documents.calls.count();
+    const deletedDocumentCallsBeforeDelete = api.deletedDocuments.calls.count();
 
     const root = fixture.nativeElement as HTMLElement;
     const softDelete = Array.from(root.querySelectorAll<HTMLButtonElement>('button'))
@@ -336,17 +392,53 @@ describe('AdminDashboardComponent', () => {
     expect(root.textContent).not.toContain('Thêm phiên bản');
     if (!softDelete) throw new Error('SUPER_ADMIN soft-delete action was not rendered');
     softDelete.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
 
     expect(api.deleteDocument).toHaveBeenCalledWith('doc-1');
+    expect(api.documents.calls.count()).toBe(activeDocumentCallsBeforeDelete + 1);
+    expect(api.deletedDocuments.calls.count()).toBe(deletedDocumentCallsBeforeDelete + 1);
+    expect(fixture.componentInstance.documents()).toEqual([]);
+    expect(fixture.componentInstance.deletedDocuments().map((item) => item.id)).toEqual(['doc-1']);
+    expect(root.textContent).toContain('Tài liệu đã xóa mềm');
+  });
+
+  it('refreshes the deleted-document list after SUPER_ADMIN approves a delete request', async () => {
+    const document = {
+      id: 'doc-1', title: 'Nhóm môn', academicYear: '2026-2027', status: 'DELETE_REQUESTED',
+      schoolName: 'Trường A', filename: 'groups.pdf', errorCode: null, graphSyncStatus: null
+    };
+    api.approveDocumentDelete.and.returnValue(of({ success: true, data: undefined }));
+    api.deletedDocuments.and.returnValue(of({
+      success: true, data: {
+        items: [
+          { ...document, status: 'DELETED' }
+        ], hasNext: false, nextCursor: ''
+      }
+    }));
+    const deletedDocumentCallsBeforeApproval = api.deletedDocuments.calls.count();
+
+    fixture.componentInstance.approveDelete(document);
+    await fixture.whenStable();
+
+    expect(api.approveDocumentDelete).toHaveBeenCalledWith('doc-1');
+    expect(api.deletedDocuments.calls.count()).toBe(deletedDocumentCallsBeforeApproval + 1);
+    expect(fixture.componentInstance.deletedDocuments().map((item) => item.id)).toEqual(['doc-1']);
   });
 
   it('shows an approval request action to ADMIN and does not let it soft-delete directly', async () => {
     const auth = TestBed.inject(AuthService) as unknown as { user: { role: string; username: string } | null; isSuperAdmin: boolean };
     auth.user = { role: 'ADMIN', username: 'admin' };
     auth.isSuperAdmin = false;
-    api.documents.and.returnValue(of({ success: true, data: { items: [{ id: 'doc-1', title: 'Nhóm môn',
-      academicYear: '2026-2027', status: 'UPLOADED', schoolName: 'Trường A', filename: 'groups.pdf', errorCode: null, graphSyncStatus: null }],
-      hasNext: false, nextCursor: '' } }));
+    api.documents.and.returnValue(of({
+      success: true, data: {
+        items: [{
+          id: 'doc-1', title: 'Nhóm môn',
+          academicYear: '2026-2027', status: 'UPLOADED', schoolName: 'Trường A', filename: 'groups.pdf', errorCode: null, graphSyncStatus: null
+        }],
+        hasNext: false, nextCursor: ''
+      }
+    }));
     api.deleteDocument.and.returnValue(of({ success: true, data: undefined }));
     fixture.componentInstance.loadDocuments();
     await fixture.whenStable();
@@ -356,19 +448,30 @@ describe('AdminDashboardComponent', () => {
     const request = Array.from(root.querySelectorAll<HTMLButtonElement>('button'))
       .find((button) => button.textContent?.trim() === 'Yêu cầu xóa');
     if (!request) throw new Error('ADMIN delete request action was not rendered');
+    const activeDocumentCallsBeforeRequest = api.documents.calls.count();
+    const deletedDocumentCallsBeforeRequest = api.deletedDocuments.calls.count();
     request.click();
+    await fixture.whenStable();
 
     expect(api.deleteDocument).toHaveBeenCalledWith('doc-1');
     expect(fixture.componentInstance.message()).toContain('để SUPER_ADMIN duyệt');
+    expect(api.documents.calls.count()).toBe(activeDocumentCallsBeforeRequest + 1);
+    expect(api.deletedDocuments.calls.count()).toBe(deletedDocumentCallsBeforeRequest);
   });
 
   it('shows the pending approval state to ADMIN without another delete action', async () => {
     const auth = TestBed.inject(AuthService) as unknown as { user: { role: string; username: string } | null; isSuperAdmin: boolean };
     auth.user = { role: 'ADMIN', username: 'admin' };
     auth.isSuperAdmin = false;
-    api.documents.and.returnValue(of({ success: true, data: { items: [{ id: 'doc-1', title: 'Nhóm môn',
-      academicYear: '2026-2027', status: 'DELETE_REQUESTED', schoolName: 'Trường A', filename: 'groups.pdf', errorCode: null, graphSyncStatus: null }],
-      hasNext: false, nextCursor: '' } }));
+    api.documents.and.returnValue(of({
+      success: true, data: {
+        items: [{
+          id: 'doc-1', title: 'Nhóm môn',
+          academicYear: '2026-2027', status: 'DELETE_REQUESTED', schoolName: 'Trường A', filename: 'groups.pdf', errorCode: null, graphSyncStatus: null
+        }],
+        hasNext: false, nextCursor: ''
+      }
+    }));
     fixture.componentInstance.loadDocuments();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -380,10 +483,16 @@ describe('AdminDashboardComponent', () => {
   });
 
   it('shows restore and unpublish only in the SUPER_ADMIN deleted-document panel', async () => {
-    api.deletedDocuments.and.returnValue(of({ success: true, data: { items: [{ id: 'deleted-1', title: 'Nhóm môn',
-      academicYear: '2026', status: 'DELETED', schoolName: 'Trường A', filename: 'groups.pdf', errorCode: null,
-      graphPublicationStatus: 'PUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: null }],
-      hasNext: false, nextCursor: '' } }));
+    api.deletedDocuments.and.returnValue(of({
+      success: true, data: {
+        items: [{
+          id: 'deleted-1', title: 'Nhóm môn',
+          academicYear: '2026', status: 'DELETED', schoolName: 'Trường A', filename: 'groups.pdf', errorCode: null,
+          graphPublicationStatus: 'PUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: null
+        }],
+        hasNext: false, nextCursor: ''
+      }
+    }));
     fixture.componentInstance.loadDeletedDocuments();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -410,55 +519,75 @@ describe('AdminDashboardComponent', () => {
   it('does not report graph lifecycle completion until the worker status is SYNCED', () => {
     jasmine.clock().install();
     try {
-    const jobStatus = new Subject<{ success: boolean; data: {
-      documentId: string; graphPublicationStatus: 'PUBLISHED' | 'UNPUBLISHED';
-      graphSyncStatus: 'PENDING' | 'RUNNING' | 'RETRY' | 'SYNCED'; graphSyncJobId: string;
-    } }>();
-    api.documentGraphSyncStatus.and.returnValue(jobStatus.asObservable());
-    api.unpublishDocument.and.returnValue(of({ success: true, data: {
-      documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'PENDING', graphSyncJobId: 'job-1'
-    } }));
+      const jobStatus = new Subject<{
+        success: boolean; data: {
+          documentId: string; graphPublicationStatus: 'PUBLISHED' | 'UNPUBLISHED';
+          graphSyncStatus: 'PENDING' | 'RUNNING' | 'RETRY' | 'SYNCED'; graphSyncJobId: string;
+        }
+      }>();
+      api.documentGraphSyncStatus.and.returnValue(jobStatus.asObservable());
+      api.unpublishDocument.and.returnValue(of({
+        success: true, data: {
+          documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'PENDING', graphSyncJobId: 'job-1'
+        }
+      }));
 
-    fixture.componentInstance.unpublishDeletedDocument({
-      id: 'deleted-1', title: 'Nhóm môn', academicYear: '2026', status: 'DELETED', schoolName: 'Trường A',
-      filename: 'groups.pdf', errorCode: null, graphPublicationStatus: 'PUBLISHED', graphSyncStatus: 'SYNCED'
-    });
-    jasmine.clock().tick(0);
-    expect(fixture.componentInstance.message()).toContain('Neo4j đang đồng bộ');
+      fixture.componentInstance.unpublishDeletedDocument({
+        id: 'deleted-1', title: 'Nhóm môn', academicYear: '2026', status: 'DELETED', schoolName: 'Trường A',
+        filename: 'groups.pdf', errorCode: null, graphPublicationStatus: 'PUBLISHED', graphSyncStatus: 'SYNCED'
+      });
+      jasmine.clock().tick(0);
+      expect(fixture.componentInstance.message()).toContain('Neo4j đang đồng bộ');
 
-    jobStatus.next({ success: true, data: {
-      documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'RETRY', graphSyncJobId: 'job-1'
-    } });
-    expect(fixture.componentInstance.message()).toContain('Neo4j đang đồng bộ');
+      jobStatus.next({
+        success: true, data: {
+          documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'RETRY', graphSyncJobId: 'job-1'
+        }
+      });
+      expect(fixture.componentInstance.message()).toContain('Neo4j đang đồng bộ');
 
-    jobStatus.next({ success: true, data: {
-      documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: 'job-1'
-    } });
-    expect(fixture.componentInstance.message()).toBe('Đã ngừng công bố các nhóm môn của tài liệu.');
+      jobStatus.next({
+        success: true, data: {
+          documentId: 'deleted-1', graphPublicationStatus: 'UNPUBLISHED', graphSyncStatus: 'SYNCED', graphSyncJobId: 'job-1'
+        }
+      });
+      expect(fixture.componentInstance.message()).toBe('Đã ngừng công bố các nhóm môn của tài liệu.');
     } finally {
       jasmine.clock().uninstall();
     }
   });
 
   it('requires all pages and an explicit review confirmation before publishing the whole school-year batch', async () => {
-    const draft = { id: 'draft-1', documentId: 'doc-1', documentVersionId: 'version-1', documentVersionNumber: 1,
+    const draft = {
+      id: 'draft-1', documentId: 'doc-1', documentVersionId: 'version-1', documentVersionNumber: 1,
       documentTitle: 'Phương án nhóm môn', documentFilename: 'groups.pdf', schoolName: 'Trường A', schoolCode: 'school-a',
       academicYear: '2026-2027', documentStatus: 'DRAFT_READY', groupCode: 'A01', groupName: 'Nhóm A01',
       subjectCodes: ['MATH'], sourcePages: [2], status: 'DRAFT' as const, confidence: 0.9,
-      createdAt: '2026-10-14T00:00:00Z' };
-    const secondDraft = { ...draft, id: 'draft-2', documentId: 'doc-2', documentVersionId: 'version-2',
-      groupCode: 'B02', groupName: 'Nhóm B02', subjectCodes: ['PHYSICS'], status: 'SUBMITTED' as const };
-    api.draftGroups.and.returnValue(of({ success: true, data: { items: [{ groupKey: 'S:school-a', schoolName: 'Trường A',
-      schoolCode: 'school-a', location: null, academicYear: '2026-2027', draftCount: 2, sourceDocumentCount: 2 }],
-      hasNext: false, nextCursor: '' } }));
+      createdAt: '2026-10-14T00:00:00Z'
+    };
+    const secondDraft = {
+      ...draft, id: 'draft-2', documentId: 'doc-2', documentVersionId: 'version-2',
+      groupCode: 'B02', groupName: 'Nhóm B02', subjectCodes: ['PHYSICS'], status: 'SUBMITTED' as const
+    };
+    api.draftGroups.and.returnValue(of({
+      success: true, data: {
+        items: [{
+          groupKey: 'S:school-a', schoolName: 'Trường A',
+          schoolCode: 'school-a', location: null, academicYear: '2026-2027', draftCount: 2, sourceDocumentCount: 2
+        }],
+        hasNext: false, nextCursor: ''
+      }
+    }));
     api.drafts.and.returnValues(
       of({ success: true, data: { items: [draft], hasNext: true, nextCursor: 'next-drafts' } }),
       of({ success: true, data: { items: [secondDraft], hasNext: false, nextCursor: '' } })
     );
     api.editDraft.and.returnValue(of({ success: true, data: undefined }));
-    api.publishDraftGroup.and.returnValue(of({ success: true, data: {
-      batchId: 'batch-1', publishedGroupCount: 1, graphSyncStatus: 'PENDING'
-    } }));
+    api.publishDraftGroup.and.returnValue(of({
+      success: true, data: {
+        batchId: 'batch-1', publishedGroupCount: 1, graphSyncStatus: 'PENDING'
+      }
+    }));
     api.documents.and.returnValue(of({ success: true, data: { items: [], hasNext: false, nextCursor: '' } }));
     fixture.componentInstance.loadDraftGroups();
     await fixture.whenStable();
@@ -500,14 +629,26 @@ describe('AdminDashboardComponent', () => {
   });
 
   it('requires a second action before SUPER_ADMIN hard-deletes one draft', async () => {
-    api.draftGroups.and.returnValue(of({ success: true, data: { items: [{ groupKey: 'S:school-a', schoolName: 'Trường A',
-      schoolCode: 'school-a', location: 'Hà Nội', academicYear: '2026-2027', draftCount: 1, sourceDocumentCount: 1 }],
-      hasNext: false, nextCursor: '' } }));
-    api.drafts.and.returnValue(of({ success: true, data: { items: [{ id: 'draft-1', documentId: 'doc-1', documentVersionId: 'version-1', documentVersionNumber: 1,
-      documentTitle: 'Phương án nhóm môn', documentFilename: 'groups.pdf', schoolName: 'Trường A', schoolCode: 'school-a',
-      academicYear: '2026-2027', documentStatus: 'DRAFT_READY', groupCode: 'A01', groupName: 'Nhóm A01',
-      subjectCodes: ['MATH', 'LITERATURE', 'PHYSICS', 'CHEMISTRY'], sourcePages: [2], status: 'DRAFT',
-      confidence: 0.9, createdAt: '2026-10-14T00:00:00Z' }], hasNext: false, nextCursor: '' } }));
+    api.draftGroups.and.returnValue(of({
+      success: true, data: {
+        items: [{
+          groupKey: 'S:school-a', schoolName: 'Trường A',
+          schoolCode: 'school-a', location: 'Hà Nội', academicYear: '2026-2027', draftCount: 1, sourceDocumentCount: 1
+        }],
+        hasNext: false, nextCursor: ''
+      }
+    }));
+    api.drafts.and.returnValue(of({
+      success: true, data: {
+        items: [{
+          id: 'draft-1', documentId: 'doc-1', documentVersionId: 'version-1', documentVersionNumber: 1,
+          documentTitle: 'Phương án nhóm môn', documentFilename: 'groups.pdf', schoolName: 'Trường A', schoolCode: 'school-a',
+          academicYear: '2026-2027', documentStatus: 'DRAFT_READY', groupCode: 'A01', groupName: 'Nhóm A01',
+          subjectCodes: ['MATH', 'LITERATURE', 'PHYSICS', 'CHEMISTRY'], sourcePages: [2], status: 'DRAFT',
+          confidence: 0.9, createdAt: '2026-10-14T00:00:00Z'
+        }], hasNext: false, nextCursor: ''
+      }
+    }));
     api.deleteDraft.and.returnValue(of({ success: true, data: undefined }));
     fixture.componentInstance.loadDraftGroups();
     await fixture.whenStable();
