@@ -6,7 +6,7 @@ import { getErrorMessage } from '../../../core/http/error-message';
 import { ChatHistoryItem, ChatMessage, ChatRequest, ChatResponse } from '../models/chat.models';
 
 const WELCOME_TEXT = `Xin chào bạn! 🎓
-Mình là trợ lý tư vấn tuyển sinh đại học & định hướng môn học THPT. Bạn cần tìm hiểu về ngành học, trường đại học hay khối thi nào?`;
+Mình có thể giúp em tìm hiểu nhóm môn THPT, đối chiếu nhóm môn theo sở thích và năng lực, hoặc tra cứu tổ hợp và ngành có liên kết trong dữ liệu.`;
 
 @Injectable({
   providedIn: 'root'
@@ -30,6 +30,7 @@ export class ChatService {
   private getHistoryForApi(): ChatHistoryItem[] {
     return this.messages()
       .filter((m) => !m.isError && m.id !== 'welcome-msg')
+      .slice(-40)
       .map((m) => ({
         role: m.role,
         content: m.content
@@ -49,18 +50,17 @@ export class ChatService {
       timestamp: new Date()
     };
 
-    // Cập nhật tin nhắn người dùng vào UI
+    const history = this.getHistoryForApi();
+
+    // Keep the current message separate; the API adds it after its conversation context.
     this.messages.update((prev) => [...prev, userMsg]);
     this.isLoading.set(true);
     this.error.set(null);
 
     const endpoint = environment.RAG_API_URL || 'http://localhost:8000/api/chat';
-    const history = this.getHistoryForApi();
-
     const requestPayload: ChatRequest = {
       user_message: trimmed,
-      context: history,
-      chat_history: history
+      context: history
     };
 
     const headers = new HttpHeaders({
@@ -92,7 +92,7 @@ export class ChatService {
       const errorMsg: ChatMessage = {
         id: 'msg-' + Date.now() + '-err',
         role: 'assistant',
-        content: `⚠️ **Lỗi kết nối:** ${errorMessage}\n\n*Gợi ý:* Hãy kiểm tra lại backend Python RAG (\`docker compose up -d\` hoặc \`python rag_api/main_api.py\`).`,
+        content: `⚠️ **Lỗi kết nối:** ${errorMessage}\n\nEm thử gửi lại sau ít phút nhé.`,
         timestamp: new Date(),
         isError: true
       };
