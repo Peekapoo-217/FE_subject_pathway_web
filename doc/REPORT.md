@@ -193,3 +193,11 @@ Skill cho `data-scrawler` cũng đã được tạo và xác thực; luồng đ�
 - [x] ADMIN thấy nút “Yêu cầu xóa”; sau khi gửi, danh sách thể hiện trạng thái chờ SUPER_ADMIN duyệt và ẩn thao tác gửi lặp.
 - [x] SUPER_ADMIN thấy thao tác “Xóa mềm” trực tiếp. Tài liệu đã xóa hoặc chờ duyệt không còn thao tác xóa trên danh sách tài liệu đang hoạt động.
 - [x] Kiểm thử component: 22/22 đạt; `npm.cmd run build` thành công.
+
+## Hợp đồng giao diện chat tư vấn nhóm môn — 2026-10-18
+
+- [x] Chỉnh lời chào theo mục tiêu tìm nhóm môn THPT; giữ phản hồi server cho trạng thái `no_data` và `unsupported`.
+- [x] Gửi lịch sử trước tin nhắn hiện tại đúng một lần, giới hạn 40 lượt như API, chỉ dùng field `context`; bỏ field cấu hình model/key không còn sử dụng ở frontend.
+- [x] Thay hướng dẫn lỗi chứa lệnh Docker/localhost bằng thông báo thử lại thân thiện.
+- [x] Thêm test HTTP cho hội thoại nhiều lượt, phản hồi no-data, nhập rỗng, xóa hội thoại và lỗi kết nối.
+- [x] Kiểm tra: `npm test -- --watch=false --browsers=ChromeHeadless` (78 test đạt); `npm run build` thành công.

@@ -13,13 +13,6 @@ export interface ChatMessage {
   isError?: boolean;
 }
 
-export interface ChatConfig {
-  ragApiUrl: string;
-  llmApiKey: string;
-  llmBaseUrl: string;
-  llmModel: string;
-}
-
 export interface ChatRequest {
   user_message: string;
   context: ChatHistoryItem[];
@@ -27,7 +20,7 @@ export interface ChatRequest {
 }
 
 export interface ChatResponse {
-  status: 'ready' | 'incomplete' | 'success' | string;
+  status: 'ready' | 'incomplete' | 'success' | 'no_data' | 'unsupported' | 'error';
   message: string;
   data?: Record<string, unknown> | null;
 }
